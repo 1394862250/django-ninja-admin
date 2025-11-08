@@ -1,0 +1,80 @@
+{% extends "user/base.html" %}
+
+{% block title %}首页 - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">欢迎回来，{{ user.username }}</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">这是您的个人控制面板</p>
+    </div>
+
+    <!-- 快捷操作区 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- 个人信息卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">
+                    {{ user.username.0|upper }}
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ user.username }}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">用户ID: {{ user.id }}</p>
+                </div>
+            </div>
+            <a href="{% url 'profile' %}" class="inline-flex items-center text-sm text-blue-600 dark:text-blue-500 hover:underline">
+                <span>查看个人信息</span>
+                <i class="fas fa-chevron-right ml-2 text-xs"></i>
+            </a>
+        </div>
+
+        <!-- 密码管理卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">账户安全</h3>
+                <i class="fas fa-shield-alt text-green-500 text-xl"></i>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">定期更新密码可以提高账户安全性</p>
+            <button id="quick-change-password" class="inline-flex items-center text-sm text-blue-600 dark:text-blue-500 hover:underline">
+                <span>修改密码</span>
+                <i class="fas fa-chevron-right ml-2 text-xs"></i>
+            </button>
+        </div>
+
+        <!-- 系统信息卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">系统信息</h3>
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="space-y-2">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span>最后登录时间：</span>
+                    <span>{{ user.last_login|date:"Y-m-d H:i" }}</span>
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span>账户创建时间：</span>
+                    <span>{{ user.date_joined|date:"Y-m-d" }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">最近活动</h2>
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+            <p>暂无活动记录</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 快速打开修改密码模态框
+    document.getElementById('quick-change-password').addEventListener('click', function() {
+        document.getElementById('change-password-btn').click();
+    });
+</script>
+{% endblock %}

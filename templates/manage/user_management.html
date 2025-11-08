@@ -1,0 +1,408 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}用户管理 - {{ block.super }}{% endblock %}
+
+{% block admin_content %}
+<!-- 页面标题和操作按钮 -->
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">用户管理</h2>
+    <button id="add-user-btn" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+        <i class="fas fa-plus mr-2"></i>
+        添加用户
+    </button>
+</div>
+
+<!-- 搜索栏 -->
+<form method="get" action="{% url 'user_management' %}" class="mb-6">
+    <div class="flex">
+        <input type="text" 
+               id="user-search" 
+               name="q" 
+               placeholder="搜索用户名或邮箱" 
+               value="{{ search_query }}"
+               class="flex-1 rounded-l-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+        <button type="submit" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
+</form>
+
+<!-- 用户表格 -->
+<div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">用户名</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">电子邮箱</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">注册时间</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">上次登录</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">状态</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {% for user in users %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ user.id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ user.username }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ user.email }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ user.date_joined|date:"Y-m-d H:i" }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ user.last_login|date:"Y-m-d H:i"|default:"从未登录" }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if user.is_active %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        活跃
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        禁用
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button class="edit-btn text-blue-600 dark:text-blue-500 hover:text-blue-900 dark:hover:text-blue-400" data-id="{{ user.id }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="{% if user.is_active %}deactivate-btn text-red-600 dark:text-red-500 hover:text-red-900 dark:hover:text-red-400{% else %}activate-btn text-green-600 dark:text-green-500 hover:text-green-900 dark:hover:text-green-400{% endif %}" 
+                            data-id="{{ user.id }}">
+                        <i class="fas fa-{% if user.is_active %}lock{% else %}unlock{% endif %}"></i>
+                    </button>
+                    <button class="delete-btn text-red-600 dark:text-red-500 hover:text-red-900 dark:hover:text-red-400" data-id="{{ user.id }}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">暂无用户数据</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页 -->
+<div class="flex justify-center mt-6 space-x-2">
+    {% if users.has_previous %}
+    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}" 
+       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        首页
+    </a>
+    <a href="?page={{ users.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        上一页
+    </a>
+    {% endif %}
+    
+    <span class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-blue-600 bg-blue-50 border border-blue-300 dark:bg-blue-900/50 dark:border-blue-700 dark:text-blue-400">
+        第 {{ users.number }} 页，共 {{ users.paginator.num_pages }} 页
+    </span>
+    
+    {% if users.has_next %}
+    <a href="?page={{ users.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        下一页
+    </a>
+    <a href="?page={{ users.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        末页
+    </a>
+    {% endif %}
+</div>
+
+<!-- 用户表单模态框 -->
+<div id="user-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 id="modal-title" class="text-lg font-medium text-gray-900 dark:text-white">添加用户</h3>
+            <button class="close-modal text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="user-form" class="p-4">
+            {% csrf_token %}
+            <input type="hidden" id="user-id" name="user_id">
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
+                    <input type="text" id="username" name="username" required
+                           class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">电子邮箱</label>
+                    <input type="email" id="email" name="email" required
+                           class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                
+                <div class="password-group">
+                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">密码</label>
+                    <input type="password" id="password" name="password"
+                           class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">编辑时留空表示不修改密码</p>
+                </div>
+                
+                <div>
+                    <label for="is-active" class="block text-sm font-medium text-gray-700 dark:text-gray-300">状态</label>
+                    <select id="is-active" name="is_active"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="1">活跃</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="is-staff" class="block text-sm font-medium text-gray-700 dark:text-gray-300">管理员权限</label>
+                    <select id="is-staff" name="is_staff"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="0">普通用户</option>
+                        <option value="1">管理员</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" class="close-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                    取消
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    保存
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 确认操作模态框 -->
+<div id="confirm-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">确认操作</h3>
+            <button class="close-modal text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="p-4">
+            <p id="confirm-message" class="text-gray-700 dark:text-gray-300">确定要删除此用户吗？此操作不可恢复。</p>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" class="close-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                    取消
+                </button>
+                <button type="button" class="confirm-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    确认
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 工具函数：显示/隐藏模态框
+    function toggleModal(modalId, show) {
+        const modal = document.getElementById(modalId);
+        if (show) {
+            modal.classList.remove('hidden');
+        } else {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // 工具函数：显示提示消息
+    function showToast(message, type = 'success') {
+        // 创建toast元素
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white text-sm z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        toast.textContent = message;
+        
+        // 添加到页面
+        document.body.appendChild(toast);
+        
+        // 3秒后移除
+        setTimeout(() => {
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // 工具函数：发送API请求
+    async function fetchAPI(url, options = {}) {
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    ...options.headers
+                }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || '操作失败');
+            }
+            return data;
+        } catch (error) {
+            throw new Error(error.message || '网络请求失败');
+        }
+    }
+
+    // 模态框相关元素
+    const userModal = document.getElementById('user-modal');
+    const confirmModal = document.getElementById('confirm-modal');
+    const userForm = document.getElementById('user-form');
+    const addUserBtn = document.getElementById('add-user-btn');
+    const closeBtns = document.querySelectorAll('.close-modal, .close-btn');
+    
+    // 打开添加用户模态框
+    addUserBtn.addEventListener('click', function() {
+        document.getElementById('modal-title').textContent = '添加用户';
+        userForm.reset();
+        document.getElementById('user-id').value = '';
+        document.querySelector('.password-group p').style.display = 'none';
+        toggleModal('user-modal', true);
+    });
+    
+    // 关闭模态框
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            toggleModal('user-modal', false);
+            toggleModal('confirm-modal', false);
+        });
+    });
+    
+    // 编辑用户
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.getAttribute('data-id');
+            try {
+                const response = await fetchAPI(`/api/users/${userId}/detail/`);
+                const user = response.data;
+                
+                document.getElementById('modal-title').textContent = '编辑用户';
+                document.getElementById('user-id').value = user.id;
+                document.getElementById('username').value = user.username;
+                document.getElementById('email').value = user.email;
+                document.getElementById('is-active').value = user.is_active ? '1' : '0';
+                document.getElementById('is-staff').value = user.is_staff ? '1' : '0';
+                document.getElementById('password').value = '';
+                document.querySelector('.password-group p').style.display = 'block';
+                
+                toggleModal('user-modal', true);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+    });
+    
+    // 删除用户
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-id');
+            document.querySelector('.confirm-btn').setAttribute('data-id', userId);
+            document.querySelector('.confirm-btn').setAttribute('data-action', 'delete');
+            document.getElementById('confirm-message').textContent = '确定要删除此用户吗？此操作不可恢复。';
+            toggleModal('confirm-modal', true);
+        });
+    });
+    
+    // 启用/禁用用户
+    document.querySelectorAll('.activate-btn, .deactivate-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-id');
+            const isActivate = this.classList.contains('activate-btn');
+            document.querySelector('.confirm-btn').setAttribute('data-id', userId);
+            document.querySelector('.confirm-btn').setAttribute('data-action', 'toggle-status');
+            document.getElementById('confirm-message').textContent = isActivate ? 
+                '确定要启用此用户吗？' : '确定要禁用此用户吗？';
+            toggleModal('confirm-modal', true);
+        });
+    });
+    
+    // 确认操作
+    document.querySelector('.confirm-btn').addEventListener('click', async function() {
+        const userId = this.getAttribute('data-id');
+        const action = this.getAttribute('data-action');
+        
+        try {
+            if (action === 'delete') {
+                await fetchAPI(`/api/users/${userId}/delete/`, {
+                    method: 'DELETE'
+                });
+                showToast('用户删除成功');
+            } else if (action === 'toggle-status') {
+                await fetchAPI(`/api/users/${userId}/toggle-status/`, {
+                    method: 'POST'
+                });
+                showToast('用户状态更新成功');
+            }
+            
+            // 刷新页面
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            toggleModal('confirm-modal', false);
+        }
+    });
+    
+    // 表单提交
+    userForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userId = document.getElementById('user-id').value;
+        const formData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            is_active: document.getElementById('is-active').value === '1',
+            is_staff: document.getElementById('is-staff').value === '1'
+        };
+        
+        try {
+            if (userId) {
+                // 更新用户
+                await fetchAPI(`/api/users/${userId}/update/`, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData)
+                });
+                showToast('用户更新成功');
+            } else {
+                // 创建用户
+                await fetchAPI('/api/users/create/', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                showToast('用户创建成功');
+            }
+            
+            // 刷新页面
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            toggleModal('user-modal', false);
+        }
+    });
+    
+    // 点击模态框外部关闭
+    window.addEventListener('click', function(event) {
+        if (event.target === userModal) {
+            toggleModal('user-modal', false);
+        }
+        if (event.target === confirmModal) {
+            toggleModal('confirm-modal', false);
+        }
+    });
+});
+</script>
+{% endblock %} 

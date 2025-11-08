@@ -1,0 +1,183 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}控制面板 - {{ block.super }}{% endblock %}
+
+{% block admin_content %}
+<!-- 页面标题和操作按钮 -->
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">系统概览</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">欢迎使用管理员控制面板，您可以在这里管理系统的各项功能</p>
+    </div>
+    <button id="refresh-btn" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+        <i class="fas fa-sync-alt mr-2"></i>
+        刷新数据
+    </button>
+</div>
+
+<!-- 统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- 用户统计 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                <i class="fas fa-users text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">总用户数</p>
+                <p class="text-2xl font-semibold text-gray-800 dark:text-white">{{ user_count|default:"0" }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{% url 'user_management' %}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                查看详情 <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- 活跃用户 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                <i class="fas fa-user-clock text-green-600 dark:text-green-400"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">今日活跃</p>
+                <p class="text-2xl font-semibold text-gray-800 dark:text-white">{{ active_today|default:"0" }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                过去24小时内活跃用户
+            </span>
+        </div>
+    </div>
+
+    <!-- 系统状态 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                <i class="fas fa-server text-green-600 dark:text-green-400"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">系统状态</p>
+                <p class="text-2xl font-semibold text-gray-800 dark:text-white">正常</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                <i class="fas fa-check-circle mr-1"></i> 所有服务运行正常
+            </span>
+        </div>
+    </div>
+
+    <!-- 系统时间 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
+                <i class="fas fa-clock text-purple-600 dark:text-purple-400"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">系统时间</p>
+                <p id="current-time" class="text-2xl font-semibold text-gray-800 dark:text-white">--:--:--</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p id="current-date" class="text-sm text-gray-600 dark:text-gray-400">
+                ----年--月--日
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 快速操作区 -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">快速操作</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <a href="{% url 'user_management' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
+            <i class="fas fa-users text-blue-600 dark:text-blue-400 text-xl"></i>
+            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">用户管理</span>
+        </a>
+        <a href="{% url 'change_password' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
+            <i class="fas fa-key text-yellow-600 dark:text-yellow-400 text-xl"></i>
+            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">修改密码</span>
+        </a>
+        <a href="{% url 'logout' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
+            <i class="fas fa-sign-out-alt text-red-600 dark:text-red-400 text-xl"></i>
+            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">退出登录</span>
+        </a>
+        <button id="theme-toggle" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
+            <i class="fas fa-moon text-purple-600 dark:text-purple-400 text-xl"></i>
+            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">切换主题</span>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 更新时间显示
+    function updateTime() {
+        const now = new Date();
+        
+        // 更新时间
+        const timeStr = now.toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        document.getElementById('current-time').textContent = timeStr;
+        
+        // 更新日期
+        const dateStr = now.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        document.getElementById('current-date').textContent = dateStr;
+    }
+    
+    // 初始更新并每秒更新一次
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // 刷新数据按钮点击事件
+    document.getElementById('refresh-btn').addEventListener('click', async function() {
+        const btn = this;
+        const originalContent = btn.innerHTML;
+        
+        // 显示加载状态
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>刷新中...';
+        btn.disabled = true;
+        
+        try {
+            // 刷新页面
+            window.location.reload();
+        } catch (error) {
+            // 恢复按钮状态
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            
+            // 显示错误消息
+            alert('刷新失败，请稍后重试');
+        }
+    });
+    
+    // 主题切换按钮点击事件
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+        const html = document.documentElement;
+        const isDark = html.classList.contains('dark');
+        
+        // 切换主题
+        if (isDark) {
+            html.classList.remove('dark');
+            localStorage.theme = 'light';
+        } else {
+            html.classList.add('dark');
+            localStorage.theme = 'dark';
+        }
+    });
+});
+</script>
+{% endblock %} 

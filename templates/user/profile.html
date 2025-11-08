@@ -1,0 +1,108 @@
+{% extends "user/base.html" %}
+
+{% block title %}个人信息 - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">个人信息</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">查看和管理您的个人信息</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 个人信息卡片 -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                        {{ user.username.0|upper }}
+                    </div>
+                    <div class="ml-4">
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ user.username }}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">用户ID: {{ user.id }}</p>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <dl class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <div class="py-4 grid grid-cols-3">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">用户名</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white col-span-2">{{ user.username }}</dd>
+                        </div>
+                        <div class="py-4 grid grid-cols-3">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">邮箱地址</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white col-span-2">
+                                {% if user.email %}
+                                    {{ user.email }}
+                                {% else %}
+                                    <span class="text-gray-400 dark:text-gray-500">未设置</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        <div class="py-4 grid grid-cols-3">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">注册时间</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white col-span-2">{{ user.date_joined|date:"Y年m月d日 H:i" }}</dd>
+                        </div>
+                        <div class="py-4 grid grid-cols-3">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">最后登录</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white col-span-2">{{ user.last_login|date:"Y年m月d日 H:i" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账户安全卡片 -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">账户安全</h3>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">登录密码</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">用于账户登录验证</p>
+                        </div>
+                        <button id="security-change-password" class="text-sm text-blue-600 dark:text-blue-500 hover:underline">修改</button>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">邮箱验证</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">用于账户安全验证</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full {% if user.email %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                            {% if user.email %}已验证{% else %}未验证{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷操作卡片 -->
+            <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">快捷操作</h3>
+                
+                <div class="space-y-3">
+                    <a href="{% url 'home' %}" class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                        <i class="fas fa-home mr-3"></i>
+                        <span>返回首页</span>
+                    </a>
+                    <a href="{% url 'logout' %}" class="flex items-center text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+                        <i class="fas fa-sign-out-alt mr-3"></i>
+                        <span>退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 快速打开修改密码模态框
+    document.getElementById('security-change-password').addEventListener('click', function() {
+        document.getElementById('change-password-btn').click();
+    });
+</script>
+{% endblock %} 
