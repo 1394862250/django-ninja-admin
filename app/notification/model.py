@@ -44,7 +44,7 @@ class Notification(TimeStampedModel):
     is_read = models.BooleanField("是否已读", default=False)
     read_at = models.DateTimeField("阅读时间", blank=True, null=True)
     scheduled_for = models.DateTimeField("计划发送时间", blank=True, null=True)
-    metadata = models.JSONField("扩展数据", blank=True, null=True)
+    sent_role = models.CharField("发送角色", max_length=20, blank=True, null=True, help_text="按角色发送时的角色标识（all/管理员/用户）")
 
     class Meta:
         verbose_name = "通知"

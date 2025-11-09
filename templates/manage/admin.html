@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载dashboard数据
     async function loadDashboard() {
         try {
-            const response = await fetch('/api/admin/dashboard', {
+            const response = await fetch('/api/manage/dashboard', {
                 method: 'GET',
                 credentials: 'same-origin'
             });
@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载图表数据
     async function loadCharts() {
         try {
-            const response = await fetch('/api/admin/dashboard/charts?days=30', {
+            const response = await fetch('/api/manage/dashboard/charts?days=30', {
                 method: 'GET',
                 credentials: 'same-origin'
             });
@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载系统信息
     async function loadSystemInfo() {
         try {
-            const response = await fetch('/api/admin/system/info', {
+            const response = await fetch('/api/manage/system/info', {
                 method: 'GET',
                 credentials: 'same-origin'
             });
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载README
     async function loadReadme() {
         try {
-            const response = await fetch('/api/admin/readme', {
+            const response = await fetch('/api/manage/readme', {
                 method: 'GET',
                 credentials: 'same-origin'
             });
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (activityChart) activityChart.resize();
         if (totalUsersChart) totalUsersChart.resize();
     });
-    
+        
     // 初始化
     initCharts();
     loadDashboard();

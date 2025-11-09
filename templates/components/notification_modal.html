@@ -1,0 +1,212 @@
+<!-- 通知模态框 -->
+<div id="notification-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- 背景遮罩 -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="closeNotificationModal()"></div>
+        
+        <!-- 模态框内容 -->
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <!-- 头部 -->
+            <div class="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">未读通知</h3>
+                <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 通知列表 -->
+            <div id="notification-list-container" class="max-h-96 overflow-y-auto">
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>加载中...</p>
+                </div>
+            </div>
+            
+            <!-- 底部 -->
+            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-t border-gray-200 dark:border-gray-600">
+                <button onclick="closeNotificationModal()" class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded focus:outline-none">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 加载未读通知列表
+    async function loadUnreadNotifications() {
+        try {
+            const isAdmin = {% if user.is_staff or user.is_superuser %}true{% else %}false{% endif %};
+            const apiUrl = isAdmin ? '/api/manage/notifications?is_read=false&page_size=10' : '/api/notifications/unread?page_size=10';
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer session'
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                renderUnreadNotifications(data.data.results);
+            }
+        } catch (error) {
+            console.error('加载未读通知列表失败:', error);
+            const container = document.getElementById('notification-list-container');
+            if (container) {
+                container.innerHTML = '<div class="text-center py-4 text-gray-500 dark:text-gray-400">加载失败</div>';
+            }
+        }
+    }
+
+    // HTML转义函数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 渲染未读通知列表
+    function renderUnreadNotifications(notifications) {
+        const container = document.getElementById('notification-list-container');
+        if (!container) return;
+        
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400">暂无未读通知</div>';
+            return;
+        }
+        
+        const html = notifications.map(notification => {
+            const priorityBadge = {
+                'low': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+                'high': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+            }[notification.priority] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            
+            const priorityLabel = {
+                'low': '低',
+                'medium': '中',
+                'high': '高'
+            }[notification.priority] || '中';
+            
+            const createdDate = new Date(notification.created).toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const notificationId = `notification-${notification.id}`;
+            const contentId = `notification-content-${notification.id}`;
+            
+            return `
+                    <div class="border-b border-gray-200 dark:border-gray-700">
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="toggleNotificationContent('${notificationId}', '${contentId}')">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate">${notification.title}</h4>
+                                        <span class="px-2 py-0.5 ${priorityBadge} text-xs rounded flex-shrink-0">${priorityLabel}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">${escapeHtml(notification.body).substring(0, 50)}${notification.body.length > 50 ? '...' : ''}</p>
+                                    <div class="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                                        <span>${notification.category}</span>
+                                        <span>${createdDate}</span>
+                                    </div>
+                                </div>
+                                <div class="ml-2 flex-shrink-0">
+                                    <i id="${notificationId}-icon" class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="${contentId}" class="hidden px-4 pb-4 bg-gray-50 dark:bg-gray-800/50">
+                            <div class="pt-2 pb-2">
+                                <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">${escapeHtml(notification.body)}</p>
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <button onclick="event.stopPropagation(); markNotificationRead(${notification.id})" class="text-xs text-orange-600 dark:text-orange-400 hover:underline">
+                                    标记为已读
+                                </button>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">${new Date(notification.created).toLocaleString('zh-CN')}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        
+        container.innerHTML = html;
+    }
+
+    // 切换通知内容展开/收起
+    window.toggleNotificationContent = function(notificationId, contentId) {
+        const content = document.getElementById(contentId);
+        const icon = document.getElementById(notificationId + '-icon');
+        
+        if (content) {
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                content.classList.remove('hidden');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            } else {
+                content.classList.add('hidden');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
+        }
+    };
+
+    // 标记通知为已读
+    window.markNotificationRead = async function(notificationId) {
+        try {
+            const response = await fetch(`/api/notifications/mark-read/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer session',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 重新加载未读通知列表和数量
+                loadUnreadNotifications();
+                // 如果存在全局的loadUnreadNotificationCount函数，调用它
+                if (typeof loadUnreadNotificationCount === 'function') {
+                    loadUnreadNotificationCount();
+                }
+            }
+        } catch (error) {
+            console.error('标记已读失败:', error);
+        }
+    };
+
+    // 切换通知模态框
+    window.toggleNotificationModal = function() {
+        const modal = document.getElementById('notification-modal');
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                loadUnreadNotifications();
+            }
+        }
+    };
+
+    // 关闭通知模态框
+    window.closeNotificationModal = function() {
+        const modal = document.getElementById('notification-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    };
+</script>
+

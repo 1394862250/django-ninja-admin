@@ -1,0 +1,414 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}通知管理 - {{ block.super }}{% endblock %}
+
+{% block page_title %}通知管理{% endblock %}
+
+{% block admin_content %}
+<!-- 页面标题和操作按钮 -->
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">通知管理</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">管理系统中的所有通知</p>
+    </div>
+    <a href="{% url 'web:notification_create' %}" class="inline-flex items-center px-4 py-2 bg-orange-500 dark:bg-gray-700 text-white text-sm font-semibold rounded focus:outline-none">
+        <i class="fas fa-plus mr-2"></i>
+        发布通知
+    </a>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">类别</label>
+            <select id="filter-category" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none">
+                <option value="">全部类别</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">状态</label>
+            <select id="filter-status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none">
+                <option value="">全部状态</option>
+                <option value="pending">待发送</option>
+                <option value="sent">已发送</option>
+                <option value="failed">发送失败</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">是否已读</label>
+            <select id="filter-is-read" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none">
+                <option value="">全部</option>
+                <option value="true">已读</option>
+                <option value="false">未读</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button id="filter-btn" class="w-full px-4 py-2 bg-orange-500 dark:bg-gray-700 text-white rounded focus:outline-none">
+                <i class="fas fa-search mr-2"></i>
+                筛选
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 通知列表 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">通知列表</h3>
+    </div>
+    
+    <div id="notifications-container" class="p-4">
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p>加载中...</p>
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    <div id="pagination-container" class="p-4 border-t border-gray-200 dark:border-gray-700"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentPage = 1;
+    let currentFilters = {
+        category: '',
+        status: '',
+        is_read: ''
+    };
+
+    // 获取Cookie的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 显示Toast通知
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded shadow-lg z-50 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // 格式化日期时间
+    function formatDateTime(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // 获取优先级标签样式
+    function getPriorityBadge(priority) {
+        const badges = {
+            'low': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            'medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+            'high': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+        };
+        const labels = {
+            'low': '低',
+            'medium': '中',
+            'high': '高'
+        };
+        return {
+            className: badges[priority] || badges.medium,
+            label: labels[priority] || labels.medium
+        };
+    }
+
+    // 获取状态标签样式
+    function getStatusBadge(status) {
+        const badges = {
+            'pending': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+            'sent': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            'failed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+        };
+        const labels = {
+            'pending': '待发送',
+            'sent': '已发送',
+            'failed': '发送失败'
+        };
+        return {
+            className: badges[status] || badges.pending,
+            label: labels[status] || labels.pending
+        };
+    }
+
+    // 加载通知列表
+    async function loadNotifications(page = 1) {
+        const container = document.getElementById('notifications-container');
+        container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p>加载中...</p></div>';
+
+        try {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                page_size: '20'
+            });
+
+            if (currentFilters.category) params.append('category', currentFilters.category);
+            if (currentFilters.status) params.append('status', currentFilters.status);
+            if (currentFilters.is_read !== '') params.append('is_read', currentFilters.is_read);
+
+            const response = await fetch(`/api/manage/notifications?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer session'
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                renderNotifications(data.data.results);
+                renderPagination(data.data.pagination);
+                
+                // 更新类别筛选选项
+                updateCategoryFilter(data.data.results);
+            } else {
+                container.innerHTML = '<div class="text-center py-8 text-red-500">加载失败</div>';
+            }
+        } catch (error) {
+            console.error('加载通知列表失败:', error);
+            container.innerHTML = '<div class="text-center py-8 text-red-500">加载失败，请稍后重试</div>';
+        }
+    }
+
+    // 渲染通知列表
+    function renderNotifications(notifications) {
+        const container = document.getElementById('notifications-container');
+        
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400">暂无通知</div>';
+            return;
+        }
+
+        const html = notifications.map(notification => {
+            const priorityBadge = getPriorityBadge(notification.priority);
+            const statusBadge = getStatusBadge(notification.status);
+            
+            return `
+                <div class="border-b border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${notification.is_read ? '' : 'bg-orange-50/30 dark:bg-orange-900/10'}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${notification.title}</h4>
+                                ${!notification.is_read ? '<span class="px-2 py-0.5 bg-orange-500 text-white text-xs rounded">未读</span>' : ''}
+                                <span class="px-2 py-0.5 ${priorityBadge.className} text-xs rounded">${priorityBadge.label}</span>
+                                <span class="px-2 py-0.5 ${statusBadge.className} text-xs rounded">${statusBadge.label}</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-2">${notification.body}</p>
+                            <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                                ${notification.sent_role ? `<span><i class="fas fa-users mr-1"></i>角色: ${notification.sent_role === 'all' ? '全局' : notification.sent_role}</span>` : ''}
+                                <span><i class="fas fa-user mr-1"></i>接收人: ${notification.recipient ? notification.recipient.username : '未知'}</span>
+                                <span><i class="fas fa-tag mr-1"></i>${notification.category}</span>
+                                <span><i class="fas fa-clock mr-1"></i>${formatDateTime(notification.created)}</span>
+                                ${notification.read_at ? `<span><i class="fas fa-check mr-1"></i>已读 ${formatDateTime(notification.read_at)}</span>` : ''}
+                                ${notification.scheduled_for ? `<span><i class="fas fa-calendar mr-1"></i>计划 ${formatDateTime(notification.scheduled_for)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="ml-4 flex items-center space-x-2">
+                            ${notification.status === 'pending' ? `
+                                <button onclick="sendNotification(${notification.id})" class="px-3 py-1 text-sm bg-green-500 text-white rounded focus:outline-none">
+                                    <i class="fas fa-paper-plane mr-1"></i>发送
+                                </button>
+                            ` : ''}
+                            ${!notification.is_read ? `
+                                <button onclick="markAsRead(${notification.id})" class="px-3 py-1 text-sm bg-blue-500 text-white rounded focus:outline-none">
+                                    标记已读
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteNotification(${notification.id})" class="px-3 py-1 text-sm bg-red-500 text-white rounded focus:outline-none">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    // 更新类别筛选选项
+    function updateCategoryFilter(notifications) {
+        const categories = [...new Set(notifications.map(n => n.category))];
+        const select = document.getElementById('filter-category');
+        const currentValue = select.value;
+        
+        // 清空现有选项（保留"全部类别"）
+        select.innerHTML = '<option value="">全部类别</option>';
+        
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            select.appendChild(option);
+        });
+        
+        // 恢复之前的选择
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    }
+
+    // 渲染分页
+    function renderPagination(pagination) {
+        const container = document.getElementById('pagination-container');
+        
+        if (pagination.total_pages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '<div class="flex items-center justify-between">';
+        html += `<div class="text-sm text-gray-600 dark:text-gray-400">共 ${pagination.total_count} 条，第 ${pagination.page} / ${pagination.total_pages} 页</div>`;
+        html += '<div class="flex items-center space-x-2">';
+        
+        if (pagination.has_previous) {
+            html += `<button onclick="goToPage(${pagination.page - 1})" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 focus:outline-none">上一页</button>`;
+        }
+        
+        if (pagination.has_next) {
+            html += `<button onclick="goToPage(${pagination.page + 1})" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 focus:outline-none">下一页</button>`;
+        }
+        
+        html += '</div></div>';
+        container.innerHTML = html;
+    }
+
+    // 标记为已读
+    window.markAsRead = async function(notificationId) {
+        try {
+            const response = await fetch(`/api/notifications/mark-read/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer session',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('已标记为已读', 'success');
+                loadNotifications(currentPage);
+            } else {
+                showToast(data.message || '操作失败', 'error');
+            }
+        } catch (error) {
+            console.error('标记已读失败:', error);
+            showToast('操作失败，请稍后重试', 'error');
+        }
+    };
+
+    // 发送通知
+    window.sendNotification = async function(notificationId) {
+        if (!confirm('确定要发送这条通知吗？')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/manage/notifications/${notificationId}/send`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer session',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('通知已发送', 'success');
+                loadNotifications(currentPage);
+            } else {
+                showToast(data.message || '发送失败', 'error');
+            }
+        } catch (error) {
+            console.error('发送通知失败:', error);
+            showToast('发送失败，请稍后重试', 'error');
+        }
+    };
+
+    // 删除通知
+    window.deleteNotification = async function(notificationId) {
+        if (!confirm('确定要删除这条通知吗？')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/manage/notifications/${notificationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer session',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('通知已删除', 'success');
+                loadNotifications(currentPage);
+            } else {
+                showToast(data.message || '删除失败', 'error');
+            }
+        } catch (error) {
+            console.error('删除通知失败:', error);
+            showToast('删除失败，请稍后重试', 'error');
+        }
+    };
+
+    // 跳转页面
+    window.goToPage = function(page) {
+        currentPage = page;
+        loadNotifications(page);
+    };
+
+    // 筛选按钮
+    document.getElementById('filter-btn').addEventListener('click', function() {
+        currentFilters = {
+            category: document.getElementById('filter-category').value,
+            status: document.getElementById('filter-status').value,
+            is_read: document.getElementById('filter-is-read').value
+        };
+        currentPage = 1;
+        loadNotifications(1);
+    });
+
+    // 初始化加载
+    loadNotifications(1);
+});
+</script>
+{% endblock %}
+

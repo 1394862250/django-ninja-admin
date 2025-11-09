@@ -48,9 +48,25 @@
                         <i class="fas fa-users w-5 h-5 mr-3 {% if active_menu == 'users' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
                         用户管理
                     </a>
+
+                    <a href="{% url 'web:notification_management' %}" 
+                       class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'notifications' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                        <i class="fas fa-bell w-5 h-5 mr-3 {% if active_menu == 'notifications' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
+                        通知管理
+                    </a>
+
+                    <a href="{% url 'web:api_docs' %}" 
+                       class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'api_docs' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                        <i class="fas fa-book w-5 h-5 mr-3 {% if active_menu == 'api_docs' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
+                        API文档
+                    </a>
+
                 </nav>
         </div>
     </div>
+
+    <!-- 通知模态框组件 -->
+    {% include "components/notification_modal.html" %}
 
     <!-- 主内容区 -->
         <div class="flex-1 ml-64">
@@ -67,7 +83,8 @@
                             <!-- 通知按钮 -->
                             <button id="notification-btn" class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                                 <i class="fas fa-bell text-lg"></i>
-                                <span class="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span id="notification-badge" class="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full hidden"></span>
+                                <span id="notification-count" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
                             </button>
                             
                             <!-- 管理员下拉菜单 -->
@@ -227,8 +244,55 @@
             }
         }
 
+        // 加载未读通知数量（任何已登录用户都可以访问）
+        async function loadUnreadNotificationCount() {
+            try {
+                const apiUrl = '/api/notifications/unread-count';
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer session'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const count = data.data.count || 0;
+                    const badge = document.getElementById('notification-badge');
+                    const countEl = document.getElementById('notification-count');
+                    
+                    if (count > 0) {
+                        if (badge) badge.classList.remove('hidden');
+                        if (countEl) {
+                            countEl.textContent = count > 99 ? '99+' : count.toString();
+                            countEl.classList.remove('hidden');
+                        }
+                    } else {
+                        if (badge) badge.classList.add('hidden');
+                        if (countEl) countEl.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('加载未读通知数量失败:', error);
+            }
+        }
+
+
         // 管理员下拉菜单功能
         document.addEventListener('DOMContentLoaded', function() {
+            // 通知按钮点击事件
+            const notificationBtn = document.getElementById('notification-btn');
+            if (notificationBtn) {
+                notificationBtn.addEventListener('click', function() {
+                    if (typeof toggleNotificationModal === 'function') {
+                        toggleNotificationModal();
+                    }
+                });
+            }
+            
             const adminUserMenuButton = document.getElementById('admin-user-menu-button');
             const adminUserMenu = document.getElementById('admin-user-menu');
             
@@ -316,6 +380,18 @@
         // 页面加载时获取数据
         window.addEventListener('DOMContentLoaded', function() {
             loadCurrentUser();
+            loadUnreadNotificationCount();
+            // 每30秒刷新一次未读通知数量和列表
+            setInterval(() => {
+                loadUnreadNotificationCount();
+                const modal = document.getElementById('notification-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    // 如果组件已加载，调用组件的loadUnreadNotifications函数
+                    if (typeof loadUnreadNotifications === 'function') {
+                        loadUnreadNotifications();
+                    }
+                }
+            }, 30000);
         });
     </script>
 </body>

@@ -230,3 +230,9 @@ CAPTCHA_TEST_MODE = False  # 生产环境设为True可跳过验证码
 
 # 验证码路由前缀
 CAPTCHA_URL_PREFIX = 'captcha/'
+
+# ==================
+# X-Frame-Options 设置
+# ==================
+# 允许同源iframe嵌入（用于API文档页面）
+X_FRAME_OPTIONS = 'SAMEORIGIN'

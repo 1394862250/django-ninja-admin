@@ -110,6 +110,48 @@ def user_management_view(request):
     return render_template(request, 'manage/user_management.html', context)
 
 
+@staff_member_required
+def api_docs_view(request):
+    """
+    API文档页面视图
+    使用iframe嵌入Django Ninja的Swagger UI文档
+    """
+    from django.http import HttpResponse
+    response = render_template(request, 'manage/api_docs.html', {
+        'page_title': 'API接口文档',
+        'active_menu': 'api_docs',  # 设置活动菜单
+    })
+    # 确保允许iframe嵌入
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
+
+
+@staff_member_required
+def notification_management_view(request):
+    """
+    通知管理页面视图
+    显示通知列表和管理功能
+    """
+    context = {
+        'page_title': '通知管理',
+        'active_menu': 'notifications',  # 设置活动菜单
+    }
+    return render_template(request, 'manage/notification_management.html', context)
+
+
+@staff_member_required
+def notification_create_view(request):
+    """
+    通知发布页面视图
+    创建新通知的表单页面
+    """
+    context = {
+        'page_title': '发布通知',
+        'active_menu': 'notifications',  # 设置活动菜单
+    }
+    return render_template(request, 'manage/notification_create.html', context)
+
+
 # ===== 通用视图函数 =====
 
 def index_view(request):

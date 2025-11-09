@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         paginationEl.classList.add('hidden');
         
         try {
-            let url = `/api/admin/users?page=${page}&page_size=10`;
+            let url = `/api/manage/users?page=${page}&page_size=10`;
             if (search) {
                 url += `&search=${encodeURIComponent(search)}`;
             }
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', async function() {
                 const userId = this.getAttribute('data-id');
                 try {
-                    const data = await fetchAPI(`/api/admin/users/${userId}`);
+                    const data = await fetchAPI(`/api/manage/users/${userId}`);
                     const user = data.data;
                     
                     document.getElementById('modal-title').textContent = '编辑用户';
@@ -436,12 +436,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             if (action === 'delete') {
-                await fetchAPI(`/api/admin/users/${userId}`, {
+                await fetchAPI(`/api/manage/users/${userId}`, {
                     method: 'DELETE'
                 });
                 showToast('用户删除成功');
             } else if (action === 'toggle-status') {
-                await fetchAPI(`/api/admin/users/${userId}/toggle-status`, {
+                await fetchAPI(`/api/manage/users/${userId}/toggle-status`, {
                     method: 'POST'
                 });
                 showToast('用户状态更新成功');
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             if (userId) {
                 // 更新用户
-                await fetchAPI(`/api/admin/users/${userId}`, {
+                await fetchAPI(`/api/manage/users/${userId}`, {
                     method: 'PUT',
                     body: JSON.stringify(formData)
                 });
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     is_staff: formData.is_staff,
                     is_active: formData.is_active
                 };
-                await fetchAPI('/api/admin/users', {
+                await fetchAPI('/api/manage/users', {
                     method: 'POST',
                     body: JSON.stringify(createData)
                 });

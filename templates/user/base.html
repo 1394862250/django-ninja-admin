@@ -137,22 +137,22 @@
                 userMenu.classList.add('hidden');
             }
         });
-
-        // 显示提示消息
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
+            
+            // 显示提示消息
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
             toast.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${
-                type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            }`;
-            toast.textContent = message;
-            
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
+                    type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                }`;
+                toast.textContent = message;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
                 toast.remove();
-            }, 3000);
-        }
-
+                }, 3000);
+            }
+            
         // 修改密码按钮事件绑定
         document.addEventListener('DOMContentLoaded', function() {
             const openBtn = document.getElementById('change-password-btn');
@@ -162,37 +162,37 @@
                     // 关闭用户菜单
                     const userMenu = document.getElementById('user-menu');
                     if (userMenu) {
-                        userMenu.classList.add('hidden');
+                userMenu.classList.add('hidden');
                     }
                     // 打开修改密码模态框
                     window.openChangePasswordModal();
                 });
             }
-        });
-        
+            });
+            
         // 登出功能
         document.getElementById('logout-link').addEventListener('click', async function(e) {
-            e.preventDefault();
-            
+                e.preventDefault();
+                
             if (!confirm('确定要退出登录吗？')) {
                 return;
             }
-            
-            try {
+                
+                try {
                 const response = await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
-                    },
+                        },
                     credentials: 'same-origin'
-                });
-                
-                const data = await response.json();
-                
+                    });
+                    
+                    const data = await response.json();
+                    
                 if (data.success) {
                     window.location.href = '{% url "web:login" %}';
-                } else {
+                    } else {
                     alert(data.message || '登出失败');
                 }
             } catch (error) {
@@ -243,7 +243,7 @@
                             avatarImg.src = userData.profile.avatar;
                             avatarImg.classList.remove('hidden');
                             avatarInitial.classList.add('hidden');
-                        }
+                }
                     }
                 }
             } catch (error) {
@@ -257,4 +257,4 @@
         });
     </script>
 </body>
-</html>
+</html> 
