@@ -1,6 +1,9 @@
 {% extends 'manage/base_admin.html' %}
+{% load static %}
 
 {% block title %}控制面板 - {{ block.super }}{% endblock %}
+
+{% block page_title %}系统概览{% endblock %}
 
 {% block admin_content %}
 <!-- 页面标题和操作按钮 -->
@@ -9,7 +12,7 @@
         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">系统概览</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">欢迎使用管理员控制面板，您可以在这里管理系统的各项功能</p>
     </div>
-    <button id="refresh-btn" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+    <button id="refresh-btn" class="inline-flex items-center px-4 py-2 bg-orange-500 dark:bg-gray-700 text-white text-sm font-semibold rounded focus:outline-none">
         <i class="fas fa-sync-alt mr-2"></i>
         刷新数据
     </button>
@@ -17,130 +20,443 @@
 
 <!-- 统计卡片 -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    <!-- 用户统计 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+    <!-- 总用户数 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center">
-            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
-                <i class="fas fa-users text-blue-600 dark:text-blue-400"></i>
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-users text-gray-700 dark:text-gray-300"></i>
             </div>
             <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-400">总用户数</p>
-                <p class="text-2xl font-semibold text-gray-800 dark:text-white">{{ user_count|default:"0" }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="total-users">0</p>
             </div>
         </div>
         <div class="mt-4">
-            <a href="{% url 'user_management' %}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                查看详情 <i class="fas fa-arrow-right ml-1"></i>
+            <a href="{% url 'web:user_management' %}" class="text-sm font-medium text-orange-600 dark:text-gray-300 inline-flex items-center">
+                查看详情 <i class="fas fa-arrow-right ml-1.5 text-xs"></i>
             </a>
         </div>
     </div>
 
     <!-- 活跃用户 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center">
-            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
-                <i class="fas fa-user-clock text-green-600 dark:text-green-400"></i>
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-user-check text-gray-700 dark:text-gray-300"></i>
             </div>
             <div class="ml-4">
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">今日活跃</p>
-                <p class="text-2xl font-semibold text-gray-800 dark:text-white">{{ active_today|default:"0" }}</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">活跃用户</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="active-users">0</p>
             </div>
         </div>
         <div class="mt-4">
             <span class="text-sm text-gray-600 dark:text-gray-400">
-                过去24小时内活跃用户
+                当前活跃用户数
             </span>
         </div>
     </div>
 
-    <!-- 系统状态 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+    <!-- 今日新增 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center">
-            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
-                <i class="fas fa-server text-green-600 dark:text-green-400"></i>
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-user-plus text-gray-700 dark:text-gray-300"></i>
             </div>
             <div class="ml-4">
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">系统状态</p>
-                <p class="text-2xl font-semibold text-gray-800 dark:text-white">正常</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">今日新增</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="new-users-today">0</p>
             </div>
         </div>
         <div class="mt-4">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <i class="fas fa-check-circle mr-1"></i> 所有服务运行正常
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                今日注册用户数
             </span>
         </div>
     </div>
 
-    <!-- 系统时间 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+    <!-- 今日登录 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center">
-            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
-                <i class="fas fa-clock text-purple-600 dark:text-purple-400"></i>
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-sign-in-alt text-gray-700 dark:text-gray-300"></i>
             </div>
             <div class="ml-4">
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">系统时间</p>
-                <p id="current-time" class="text-2xl font-semibold text-gray-800 dark:text-white">--:--:--</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">今日登录</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="logins-today">0</p>
             </div>
         </div>
         <div class="mt-4">
-            <p id="current-date" class="text-sm text-gray-600 dark:text-gray-400">
-                ----年--月--日
-            </p>
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                今日登录次数
+            </span>
         </div>
     </div>
 </div>
 
-<!-- 快速操作区 -->
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">快速操作</h3>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <a href="{% url 'user_management' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
-            <i class="fas fa-users text-blue-600 dark:text-blue-400 text-xl"></i>
-            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">用户管理</span>
-        </a>
-        <a href="{% url 'change_password' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
-            <i class="fas fa-key text-yellow-600 dark:text-yellow-400 text-xl"></i>
-            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">修改密码</span>
-        </a>
-        <a href="{% url 'logout' %}" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
-            <i class="fas fa-sign-out-alt text-red-600 dark:text-red-400 text-xl"></i>
-            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">退出登录</span>
-        </a>
-        <button id="theme-toggle" class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
-            <i class="fas fa-moon text-purple-600 dark:text-purple-400 text-xl"></i>
-            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">切换主题</span>
-        </button>
+<!-- 图表区域 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 用户注册频率 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">用户注册频率</h3>
+        <div id="registration-chart" style="width: 100%; height: 300px;"></div>
+    </div>
+
+    <!-- 用户活跃频率 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">用户活跃频率</h3>
+        <div id="activity-chart" style="width: 100%; height: 300px;"></div>
+    </div>
+</div>
+
+<!-- 平台用户量 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">平台用户量趋势</h3>
+    <div id="total-users-chart" style="width: 100%; height: 400px;"></div>
+</div>
+
+<!-- 系统信息 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 内存占用 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">系统内存占用</h3>
+        <div class="space-y-4">
+            <div>
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-gray-600 dark:text-gray-400">系统内存</span>
+                    <span class="text-gray-900 dark:text-white font-medium" id="memory-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                    <div id="memory-bar" class="bg-orange-500 h-4 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span id="memory-used">0</span> MB / <span id="memory-total">0</span> MB
+                </div>
+            </div>
+            <div>
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-gray-600 dark:text-gray-400">进程内存</span>
+                    <span class="text-gray-900 dark:text-white font-medium" id="process-memory">0 MB</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 运行时长 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">系统运行时长</h3>
+        <div class="flex items-center justify-center h-full">
+            <div class="text-center">
+                <div class="text-4xl font-bold text-orange-600 dark:text-orange-400 mb-2" id="uptime-display">0天 0小时 0分钟</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" id="uptime-detail">系统已运行</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- README介绍 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">系统介绍</h3>
+    <div id="readme-content" class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+        <p class="text-gray-500 dark:text-gray-400">加载中...</p>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/echarts.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 更新时间显示
-    function updateTime() {
-        const now = new Date();
-        
-        // 更新时间
-        const timeStr = now.toLocaleTimeString('zh-CN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        document.getElementById('current-time').textContent = timeStr;
-        
-        // 更新日期
-        const dateStr = now.toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        document.getElementById('current-date').textContent = dateStr;
+    // 图表实例
+    let registrationChart = null;
+    let activityChart = null;
+    let totalUsersChart = null;
+    
+    // 获取Cookie的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
     
-    // 初始更新并每秒更新一次
-    updateTime();
-    setInterval(updateTime, 1000);
+    // 初始化图表
+    function initCharts() {
+        // 用户注册频率图表
+        const registrationChartDom = document.getElementById('registration-chart');
+        if (registrationChartDom) {
+            registrationChart = echarts.init(registrationChartDom);
+        }
+        
+        // 用户活跃频率图表
+        const activityChartDom = document.getElementById('activity-chart');
+        if (activityChartDom) {
+            activityChart = echarts.init(activityChartDom);
+        }
+        
+        // 平台用户量图表
+        const totalUsersChartDom = document.getElementById('total-users-chart');
+        if (totalUsersChartDom) {
+            totalUsersChart = echarts.init(totalUsersChartDom);
+        }
+    }
+    
+    // 加载dashboard数据
+    async function loadDashboard() {
+        try {
+            const response = await fetch('/api/admin/dashboard', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                document.getElementById('total-users').textContent = data.data.total_users || 0;
+                document.getElementById('active-users').textContent = data.data.active_users || 0;
+                document.getElementById('new-users-today').textContent = data.data.new_users_today || 0;
+                document.getElementById('logins-today').textContent = data.data.logins_today || 0;
+            }
+        } catch (error) {
+            console.error('加载管理数据失败:', error);
+        }
+    }
+    
+    // 加载图表数据
+    async function loadCharts() {
+        try {
+            const response = await fetch('/api/admin/dashboard/charts?days=30', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                // 用户注册频率图表
+                if (registrationChart && data.data.registration) {
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: data.data.registration.dates,
+                            axisLabel: {
+                                rotate: 45,
+                                interval: Math.floor(data.data.registration.dates.length / 10)
+                            }
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            name: '注册用户数',
+                            type: 'line',
+                            smooth: true,
+                            data: data.data.registration.counts,
+                            itemStyle: {
+                                color: '#f97316'
+                            },
+                            areaStyle: {
+                                color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0, color: 'rgba(249, 115, 22, 0.3)'
+                                    }, {
+                                        offset: 1, color: 'rgba(249, 115, 22, 0.1)'
+                                    }]
+                                }
+                            }
+                        }]
+                    };
+                    registrationChart.setOption(option);
+                }
+                
+                // 用户活跃频率图表
+                if (activityChart && data.data.activity) {
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: data.data.activity.dates,
+                            axisLabel: {
+                                rotate: 45,
+                                interval: Math.floor(data.data.activity.dates.length / 10)
+                            }
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            name: '活跃用户数',
+                            type: 'line',
+                            smooth: true,
+                            data: data.data.activity.counts,
+                            itemStyle: {
+                                color: '#3b82f6'
+                            },
+                            areaStyle: {
+                                color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0, color: 'rgba(59, 130, 246, 0.3)'
+                                    }, {
+                                        offset: 1, color: 'rgba(59, 130, 246, 0.1)'
+                                    }]
+                                }
+                            }
+                        }]
+                    };
+                    activityChart.setOption(option);
+                }
+                
+                // 平台用户量图表
+                if (totalUsersChart && data.data.total_users) {
+                    const dates = data.data.total_users.data.map(item => item.date);
+                    const counts = data.data.total_users.data.map(item => item.count);
+                    
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: dates,
+                            axisLabel: {
+                                rotate: 45,
+                                interval: Math.floor(dates.length / 10)
+                            }
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            name: '总用户数',
+                            type: 'line',
+                            smooth: true,
+                            data: counts,
+                            itemStyle: {
+                                color: '#10b981'
+                            },
+                            areaStyle: {
+                                color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0, color: 'rgba(16, 185, 129, 0.3)'
+                                    }, {
+                                        offset: 1, color: 'rgba(16, 185, 129, 0.1)'
+                                    }]
+                                }
+                            }
+                        }]
+                    };
+                    totalUsersChart.setOption(option);
+                }
+            }
+        } catch (error) {
+            console.error('加载图表数据失败:', error);
+        }
+    }
+    
+    // 加载系统信息
+    async function loadSystemInfo() {
+        try {
+            const response = await fetch('/api/admin/system/info', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                // 更新内存信息
+                const memory = data.data.memory;
+                document.getElementById('memory-percent').textContent = memory.percent.toFixed(1) + '%';
+                document.getElementById('memory-bar').style.width = memory.percent + '%';
+                document.getElementById('memory-used').textContent = memory.used_mb.toFixed(0);
+                document.getElementById('memory-total').textContent = memory.total_mb.toFixed(0);
+                document.getElementById('process-memory').textContent = memory.process_mb.toFixed(2) + ' MB';
+                
+                // 更新运行时长
+                const uptime = data.data.uptime;
+                document.getElementById('uptime-display').textContent = uptime.formatted;
+                document.getElementById('uptime-detail').textContent = '系统已运行 ' + uptime.formatted;
+            }
+        } catch (error) {
+            console.error('加载系统信息失败:', error);
+        }
+    }
+    
+    // 加载README
+    async function loadReadme() {
+        try {
+            const response = await fetch('/api/admin/readme', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                document.getElementById('readme-content').innerHTML = data.data.html;
+            }
+        } catch (error) {
+            console.error('加载README失败:', error);
+            document.getElementById('readme-content').innerHTML = '<p class="text-red-500">加载失败</p>';
+        }
+    }
     
     // 刷新数据按钮点击事件
     document.getElementById('refresh-btn').addEventListener('click', async function() {
@@ -152,32 +468,36 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
         
         try {
-            // 刷新页面
-            window.location.reload();
+            await Promise.all([
+                loadDashboard(),
+                loadCharts(),
+                loadSystemInfo(),
+                loadReadme()
+            ]);
         } catch (error) {
-            // 恢复按钮状态
+            alert('刷新失败，请稍后重试');
+        } finally {
             btn.innerHTML = originalContent;
             btn.disabled = false;
-            
-            // 显示错误消息
-            alert('刷新失败，请稍后重试');
         }
     });
     
-    // 主题切换按钮点击事件
-    document.getElementById('theme-toggle').addEventListener('click', function() {
-        const html = document.documentElement;
-        const isDark = html.classList.contains('dark');
-        
-        // 切换主题
-        if (isDark) {
-            html.classList.remove('dark');
-            localStorage.theme = 'light';
-        } else {
-            html.classList.add('dark');
-            localStorage.theme = 'dark';
-        }
+    // 窗口大小改变时重新调整图表
+    window.addEventListener('resize', function() {
+        if (registrationChart) registrationChart.resize();
+        if (activityChart) activityChart.resize();
+        if (totalUsersChart) totalUsersChart.resize();
     });
+    
+    // 初始化
+    initCharts();
+    loadDashboard();
+    loadCharts();
+    loadSystemInfo();
+    loadReadme();
+    
+    // 定时更新系统信息（每30秒）
+    setInterval(loadSystemInfo, 30000);
 });
 </script>
 {% endblock %} 

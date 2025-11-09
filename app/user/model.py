@@ -35,21 +35,29 @@ class UserProfile(TimeStampedModel):
         null=True, 
         verbose_name="电话号码"
     )
-    bio = models.TextField(
-        blank=True, 
-        null=True, 
-        verbose_name="个人简介"
+    nickname = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="昵称"
     )
-    location = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        verbose_name="位置"
+    GENDER_CHOICES = [
+        ('male', '男'),
+        ('female', '女'),
+        ('other', '其他'),
+        ('prefer_not_to_say', '不愿透露'),
+    ]
+    gender = models.CharField(
+        max_length=20,
+        choices=GENDER_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="性别"
     )
-    website = models.URLField(
-        blank=True, 
-        null=True, 
-        verbose_name="个人网站"
+    birth_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="出生日期"
     )
     
     # 头像相关
@@ -101,6 +109,23 @@ class UserProfile(TimeStampedModel):
 
     def __str__(self):
         return f"资料 - {self.user.username}"
+    
+    def generate_nickname(self):
+        """生成随机昵称：用户{随机五位数字}"""
+        import random
+        random_number = random.randint(10000, 99999)
+        return f"用户{random_number}"
+    
+    def save(self, *args, **kwargs):
+        """保存时自动生成昵称（如果未设置）"""
+        if not self.nickname or (isinstance(self.nickname, str) and not self.nickname.strip()):
+            # 确保昵称唯一
+            while True:
+                nickname = self.generate_nickname()
+                if not UserProfile.objects.filter(nickname=nickname).exclude(pk=self.pk if self.pk else None).exists():
+                    self.nickname = nickname
+                    break
+        super().save(*args, **kwargs)
     
     def update_login_count(self):
         """更新登录次数"""

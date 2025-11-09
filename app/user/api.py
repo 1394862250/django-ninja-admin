@@ -16,13 +16,18 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from ninja import Router
 from ninja.security import HttpBearer
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 import json
+import psutil
+import os
+import time
+import markdown
 
 # 导入工具和验证器
 from app.utils.validators import (
     UserLoginSchema, UserRegisterSchema, UserUpdateSchema, ChangePasswordSchema,
-    CaptchaRequestSchema, CaptchaVerifySchema
+    CaptchaRequestSchema, CaptchaVerifySchema, AdminCreateUserSchema
 )
 
 # 导入新模型
@@ -208,7 +213,9 @@ def login_user(request, data: UserLoginSchema):
                     'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
                     'profile': {
                         'phone': user.profile.phone if hasattr(user, 'profile') and user.profile else None,
-                        'bio': user.profile.bio if hasattr(user, 'profile') and user.profile else None,
+                        'nickname': user.profile.nickname if hasattr(user, 'profile') and user.profile else None,
+                        'gender': user.profile.gender if hasattr(user, 'profile') and user.profile else None,
+                        'birth_date': user.profile.birth_date.strftime('%Y-%m-%d') if hasattr(user, 'profile') and user.profile and user.profile.birth_date else None,
                         'status': user.profile.status if hasattr(user, 'profile') and user.profile else 'active',
                         'login_count': user.profile.login_count if hasattr(user, 'profile') and user.profile else 0,
                     },
@@ -256,6 +263,24 @@ def register_user(request, data: UserRegisterSchema):
             password=data.password1
         )
         
+        # 刷新用户对象以确保 profile 已创建（信号处理器已执行）
+        user.refresh_from_db()
+        
+        # 更新用户资料（如果提供了额外信息）
+        if hasattr(user, 'profile'):
+            profile = user.profile
+            # 如果用户提供了昵称，覆盖自动生成的昵称
+            if data.nickname:
+                profile.nickname = data.nickname
+            if data.gender:
+                profile.gender = data.gender
+            if data.birth_date:
+                from datetime import datetime
+                profile.birth_date = datetime.strptime(data.birth_date, '%Y-%m-%d').date()
+            if data.phone:
+                profile.phone = data.phone
+            profile.save()
+        
         # 记录注册活动
         UserActivity.objects.create(
             user=user,
@@ -271,6 +296,9 @@ def register_user(request, data: UserRegisterSchema):
                 'username': user.username,
                 'email': user.email,
                 'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                'profile': {
+                    'nickname': user.profile.nickname if hasattr(user, 'profile') else None,
+                },
                 'message': '注册成功，请检查邮箱进行验证'
             },
             message="注册成功",
@@ -357,9 +385,9 @@ def get_user_profile(request):
                 'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
                 'profile': {
                     'phone': user.profile.phone if hasattr(user, 'profile') else None,
-                    'bio': user.profile.bio if hasattr(user, 'profile') else None,
-                    'location': user.profile.location if hasattr(user, 'profile') else None,
-                    'website': user.profile.website if hasattr(user, 'profile') else None,
+                    'nickname': user.profile.nickname if hasattr(user, 'profile') else None,
+                    'gender': user.profile.gender if hasattr(user, 'profile') else None,
+                    'birth_date': user.profile.birth_date.strftime('%Y-%m-%d') if hasattr(user, 'profile') and user.profile.birth_date else None,
                     'avatar': user.profile.avatar.url if hasattr(user, 'profile') and user.profile.avatar else None,
                     'status': user.profile.status if hasattr(user, 'profile') else 'active',
                     'login_count': user.profile.login_count if hasattr(user, 'profile') else 0,
@@ -419,6 +447,33 @@ def change_password(request, data: ChangePasswordSchema):
             return auth_check
         
         user = request.user
+        
+        # 验证验证码（如果提供了验证码）
+        if data.captcha and data.captcha_key:
+            try:
+                captcha_store = CaptchaStore.objects.get(
+                    hashkey=data.captcha_key,
+                    response=data.captcha
+                )
+                # 验证通过后删除验证码记录
+                captcha_store.delete()
+            except CaptchaStore.DoesNotExist:
+                return error_response(
+                    message="验证码错误或已过期",
+                    status_code=400
+                )
+        elif data.captcha or data.captcha_key:
+            # 如果只提供了其中一个，说明验证码不完整
+            return error_response(
+                message="请提供完整的验证码信息",
+                status_code=400
+            )
+        else:
+            # 如果没有提供验证码，返回错误
+            return error_response(
+                message="请提供验证码",
+                status_code=400
+            )
         
         # 验证当前密码
         if not check_password(data.old_password, user.password):
@@ -584,12 +639,19 @@ def update_profile(request, data: dict):
         # 更新字段
         if 'phone' in data:
             profile.phone = data['phone']
-        if 'bio' in data:
-            profile.bio = data['bio']
-        if 'location' in data:
-            profile.location = data['location']
-        if 'website' in data:
-            profile.website = data['website']
+        if 'nickname' in data:
+            profile.nickname = data['nickname']
+        if 'gender' in data:
+            profile.gender = data['gender']
+        if 'birth_date' in data:
+            from datetime import datetime
+            try:
+                profile.birth_date = datetime.strptime(data['birth_date'], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                return error_response(
+                    message="出生日期格式错误，请使用 YYYY-MM-DD 格式",
+                    status_code=400
+                )
         
         profile.save()
         
@@ -605,9 +667,9 @@ def update_profile(request, data: dict):
         return success_response(
             data={
                 'phone': profile.phone,
-                'bio': profile.bio,
-                'location': profile.location,
-                'website': profile.website,
+                'nickname': profile.nickname,
+                'gender': profile.gender,
+                'birth_date': profile.birth_date.strftime('%Y-%m-%d') if profile.birth_date else None,
             },
             message="个人资料更新成功"
         )
@@ -665,6 +727,195 @@ def admin_dashboard(request):
         )
 
 
+@api.get("/admin/dashboard/charts")
+def get_dashboard_charts(request, days: int = 30):
+    """
+    获取dashboard图表数据
+    包括：用户注册频率、用户活跃频率、平台用户量
+    """
+    try:
+        # 检查管理员权限
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+        
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # 用户注册频率（按天统计）
+        registration_data = defaultdict(int)
+        users = User.objects.filter(date_joined__date__gte=start_date, date_joined__date__lte=end_date)
+        for user in users:
+            date_str = user.date_joined.date().strftime('%Y-%m-%d')
+            registration_data[date_str] += 1
+        
+        # 生成完整的日期列表
+        registration_dates = []
+        registration_counts = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            registration_dates.append(date_str)
+            registration_counts.append(registration_data[date_str])
+            current_date += timedelta(days=1)
+        
+        # 用户活跃频率（按天统计登录活动）
+        activity_data = defaultdict(int)
+        activities = UserActivity.objects.filter(
+            activity_type='login',
+            created__date__gte=start_date,
+            created__date__lte=end_date
+        )
+        for activity in activities:
+            date_str = activity.created.date().strftime('%Y-%m-%d')
+            activity_data[date_str] += 1
+        
+        # 生成完整的日期列表
+        activity_dates = []
+        activity_counts = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            activity_dates.append(date_str)
+            activity_counts.append(activity_data[date_str])
+            current_date += timedelta(days=1)
+        
+        # 平台用户量（累计）
+        total_users_by_date = []
+        current_date = start_date
+        while current_date <= end_date:
+            count = User.objects.filter(date_joined__date__lte=current_date).count()
+            total_users_by_date.append({
+                'date': current_date.strftime('%Y-%m-%d'),
+                'count': count
+            })
+            current_date += timedelta(days=1)
+        
+        return success_response(
+            data={
+                'registration': {
+                    'dates': registration_dates,
+                    'counts': registration_counts
+                },
+                'activity': {
+                    'dates': activity_dates,
+                    'counts': activity_counts
+                },
+                'total_users': {
+                    'data': total_users_by_date
+                }
+            },
+            message="获取图表数据成功"
+        )
+        
+    except Exception as exc:
+        return error_response(
+            message=f"获取图表数据失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.get("/admin/system/info")
+def get_system_info(request):
+    """
+    获取系统信息（内存占用、运行时长）
+    """
+    try:
+        # 检查管理员权限
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+        
+        # 获取内存信息
+        memory = psutil.virtual_memory()
+        memory_used_mb = memory.used / (1024 * 1024)
+        memory_total_mb = memory.total / (1024 * 1024)
+        memory_percent = memory.percent
+        
+        # 获取进程信息（Django进程）
+        process = psutil.Process(os.getpid())
+        process_memory_mb = process.memory_info().rss / (1024 * 1024)
+        
+        # 获取系统运行时长（从进程创建时间计算）
+        process_create_time = process.create_time()
+        uptime_seconds = time.time() - process_create_time
+        
+        # 格式化运行时长
+        days = int(uptime_seconds // 86400)
+        hours = int((uptime_seconds % 86400) // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        seconds = int(uptime_seconds % 60)
+        
+        uptime_str = f"{days}天 {hours}小时 {minutes}分钟 {seconds}秒"
+        
+        return success_response(
+            data={
+                'memory': {
+                    'used_mb': round(memory_used_mb, 2),
+                    'total_mb': round(memory_total_mb, 2),
+                    'percent': memory_percent,
+                    'process_mb': round(process_memory_mb, 2)
+                },
+                'uptime': {
+                    'seconds': int(uptime_seconds),
+                    'formatted': uptime_str,
+                    'days': days,
+                    'hours': hours,
+                    'minutes': minutes,
+                    'seconds_remainder': seconds
+                }
+            },
+            message="获取系统信息成功"
+        )
+        
+    except Exception as exc:
+        return error_response(
+            message=f"获取系统信息失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.get("/admin/readme")
+def get_readme(request):
+    """
+    获取README.md内容并转换为HTML
+    """
+    try:
+        # 检查管理员权限
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+        
+        # 读取README.md文件
+        readme_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'README.md')
+        
+        if not os.path.exists(readme_path):
+            return error_response(
+                message="README.md文件不存在",
+                status_code=404
+            )
+        
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            readme_content = f.read()
+        
+        # 转换为HTML
+        html_content = markdown.markdown(readme_content, extensions=['extra', 'codehilite'])
+        
+        return success_response(
+            data={
+                'html': html_content,
+                'raw': readme_content
+            },
+            message="获取README成功"
+        )
+        
+    except Exception as exc:
+        return error_response(
+            message=f"获取README失败: {str(exc)}",
+            status_code=500
+        )
+
+
 @api.get("/admin/users")
 def list_users(request, page: int = 1, page_size: int = 10, search: Optional[str] = None):
     """
@@ -705,7 +956,8 @@ def list_users(request, page: int = 1, page_size: int = 10, search: Optional[str
                 'profile': {
                     'status': profile.status if profile else 'active',
                     'phone': profile.phone if profile and profile.phone else None,
-                    'location': profile.location if profile and profile.location else None,
+                    'nickname': profile.nickname if profile and profile.nickname else None,
+                    'gender': profile.gender if profile and profile.gender else None,
                     'login_count': profile.login_count if profile else 0,
                 }
             })
@@ -761,9 +1013,9 @@ def get_user_detail(request, user_id: int):
                 'last_login': target_user.last_login.strftime('%Y-%m-%d %H:%M:%S') if target_user.last_login else None,
                 'profile': {
                     'phone': profile.phone if profile else None,
-                    'bio': profile.bio if profile else None,
-                    'location': profile.location if profile else None,
-                    'website': profile.website if profile else None,
+                    'nickname': profile.nickname if profile else None,
+                    'gender': profile.gender if profile else None,
+                    'birth_date': profile.birth_date.strftime('%Y-%m-%d') if profile and profile.birth_date else None,
                     'status': profile.status if profile else 'active',
                     'login_count': profile.login_count if profile else 0,
                     'last_activity': profile.last_activity.strftime('%Y-%m-%d %H:%M:%S') if profile and profile.last_activity else None,
@@ -781,7 +1033,7 @@ def get_user_detail(request, user_id: int):
 
 
 @api.post("/admin/users")
-def create_user(request, data: UserRegisterSchema):
+def create_user(request, data: AdminCreateUserSchema):
     """
     创建新用户 - 增强版
     """
@@ -809,13 +1061,17 @@ def create_user(request, data: UserRegisterSchema):
         user = User.objects.create_user(
             username=data.username,
             email=data.email,
-            password=data.password1,
-            is_staff=False,
-            is_active=True
+            password=data.password,
+            is_staff=data.is_staff if data.is_staff is not None else False,
+            is_active=data.is_active if data.is_active is not None else True
         )
         
-        # 创建用户扩展信息
-        UserProfile.objects.create(user=user)
+        # 创建用户扩展信息（昵称会在 save 时自动生成）
+        # 如果提供了昵称，则使用提供的昵称；否则自动生成
+        profile = UserProfile.objects.create(
+            user=user,
+            nickname=data.nickname if data.nickname else None  # None 会触发自动生成
+        )
         
         return success_response(
             data={
@@ -824,7 +1080,10 @@ def create_user(request, data: UserRegisterSchema):
                 'email': user.email,
                 'is_active': user.is_active,
                 'is_staff': user.is_staff,
-                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S')
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                'profile': {
+                    'nickname': profile.nickname
+                }
             },
             message="用户创建成功",
             status_code=201
@@ -856,6 +1115,16 @@ def update_user(request, user_id: int, data: UserUpdateSchema):
                 status_code=404
             )
         
+        # 验证邮箱格式
+        if data.email:
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, data.email):
+                return error_response(
+                    message="邮箱格式不正确",
+                    status_code=400
+                )
+        
         # 检查用户名是否已存在（排除当前用户）
         if data.username and User.objects.filter(username=data.username).exclude(id=user_id).exists():
             return error_response(
@@ -884,6 +1153,18 @@ def update_user(request, user_id: int, data: UserUpdateSchema):
         
         target_user.save()
         
+        # 更新用户资料（昵称）
+        if hasattr(target_user, 'profile'):
+            profile = target_user.profile
+            if data.nickname is not None:
+                # 如果提供了昵称且不为空，则更新；如果为 None，则自动生成
+                if data.nickname:
+                    profile.nickname = data.nickname
+                else:
+                    # None 表示自动生成
+                    profile.nickname = None  # 触发自动生成
+                profile.save()
+        
         return success_response(
             data={
                 'id': target_user.id,
@@ -891,7 +1172,10 @@ def update_user(request, user_id: int, data: UserUpdateSchema):
                 'email': target_user.email,
                 'is_active': target_user.is_active,
                 'is_staff': target_user.is_staff,
-                'is_superuser': target_user.is_superuser
+                'is_superuser': target_user.is_superuser,
+                'profile': {
+                    'nickname': target_user.profile.nickname if hasattr(target_user, 'profile') else None
+                }
             },
             message="用户信息更新成功"
         )

@@ -32,3 +32,9 @@ django-ranged-response==0.2.0
 # 开发工具
 django-appconf==1.1.0
 pilkit==3.0
+
+# 系统监控
+psutil==5.9.8
+
+# Markdown处理
+markdown==3.6

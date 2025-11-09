@@ -21,7 +21,7 @@
                 <!-- 左侧Logo和标题 -->
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
-                        <div class="text-xl font-bold text-blue-600 dark:text-blue-500">
+                        <div class="text-xl font-bold text-orange-600 dark:text-gray-100">
                             {% include "components/system_title.html" %}
                         </div>
                     </div>
@@ -30,40 +30,41 @@
                 <!-- 右侧用户菜单 -->
                 <div class="flex items-center">
                     <!-- 主题切换按钮 -->
-                    <button id="theme-toggle" class="p-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
-                        <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
-                        <i class="fas fa-moon text-blue-300 hidden dark:inline"></i>
+                    <button id="theme-toggle" class="p-2 text-orange-600 dark:text-gray-400">
+                        <i class="fas fa-sun text-amber-500 dark:hidden"></i>
+                        <i class="fas fa-moon text-slate-300 hidden dark:inline"></i>
                     </button>
 
                     <!-- 用户下拉菜单 -->
                     <div class="ml-3 relative">
                         <div>
                             <button id="user-menu-button" class="flex items-center space-x-3 focus:outline-none">
-                                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                                    {{ user.username.0|upper }}
+                                <div id="navbar-avatar" class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                    <span id="navbar-avatar-initial">{{ user.username.0|upper }}</span>
+                                    <img id="navbar-avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
                                 </div>
                                 <div class="hidden md:block text-sm text-gray-700 dark:text-gray-300">
-                                    {{ user.username }}
+                                    <span id="navbar-username">{{ user.username }}</span>
                                 </div>
                                 <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
                             </button>
                         </div>
 
                         <!-- 下拉菜单 -->
-                        <div id="user-menu" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-600">
+                        <div id="user-menu" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50">
                             <div class="py-1">
-                                <a href="#" class="group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-                                    <i class="fas fa-user-circle mr-3 text-gray-400 group-hover:text-gray-500"></i>
+                                <a href="{% url 'web:user_profile' %}" class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-user-circle mr-2 text-gray-500 dark:text-gray-500"></i>
                                     个人信息
                                 </a>
-                                <button id="change-password-btn" class="w-full group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-                                    <i class="fas fa-key mr-3 text-gray-400 group-hover:text-gray-500"></i>
+                                <button id="change-password-btn" class="w-full flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left">
+                                    <i class="fas fa-key mr-2 text-gray-500 dark:text-gray-500"></i>
                                     修改密码
                                 </button>
                             </div>
-                            <div class="py-1">
-                                <a href="{% url 'logout' %}" class="group flex items-center px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
-                                    <i class="fas fa-sign-out-alt mr-3 text-red-400 group-hover:text-red-500"></i>
+                            <div class="py-1 border-t border-gray-200 dark:border-gray-700">
+                                <a href="#" id="logout-link" class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-sign-out-alt mr-2 text-gray-500 dark:text-gray-500"></i>
                                     退出登录
                                 </a>
                             </div>
@@ -87,55 +88,14 @@
             </div>
             {% endif %}
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+            <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                 {% block content %}{% endblock %}
             </div>
         </div>
     </div>
 
-    <!-- 修改密码模态框 -->
-    <div id="change-password-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">修改密码</h3>
-                <button class="close-modal text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <form id="change-password-form" class="p-4">
-                {% csrf_token %}
-                <div class="space-y-4">
-                    <div>
-                        <label for="old_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">当前密码</label>
-                        <input type="password" id="old_password" name="old_password" required
-                               class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    
-                    <div>
-                        <label for="new_password1" class="block text-sm font-medium text-gray-700 dark:text-gray-300">新密码</label>
-                        <input type="password" id="new_password1" name="new_password1" required
-                               class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    
-                    <div>
-                        <label for="new_password2" class="block text-sm font-medium text-gray-700 dark:text-gray-300">确认新密码</label>
-                        <input type="password" id="new_password2" name="new_password2" required
-                               class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
-                        取消
-                    </button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        确认修改
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- 修改密码模态框组件 -->
+    {% include "components/change_password.html" %}
 
     {% block scripts %}{% endblock %}
 
@@ -178,94 +138,123 @@
             }
         });
 
-        // 修改密码模态框功能
+        // 显示提示消息
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 修改密码按钮事件绑定
         document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('change-password-modal');
-            const form = document.getElementById('change-password-form');
             const openBtn = document.getElementById('change-password-btn');
-            const closeBtns = modal.querySelectorAll('.close-modal');
-            
-            // 显示/隐藏模态框
-            function toggleModal(show) {
-                if (show) {
-                    modal.classList.remove('hidden');
-                } else {
-                    modal.classList.add('hidden');
-                    form.reset();
-                }
-            }
-            
-            // 显示提示消息
-            function showToast(message, type = 'success') {
-                const toast = document.createElement('div');
-                toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white text-sm z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
-                    type === 'success' ? 'bg-green-500' : 'bg-red-500'
-                }`;
-                toast.textContent = message;
-                
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.classList.add('translate-y-2', 'opacity-0');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            }
-            
-            // 打开模态框
-            openBtn.addEventListener('click', () => {
-                userMenu.classList.add('hidden');
-                toggleModal(true);
-            });
-            
-            // 关闭模态框
-            closeBtns.forEach(btn => {
-                btn.addEventListener('click', () => toggleModal(false));
-            });
-            
-            // 点击模态框外部关闭
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    toggleModal(false);
-                }
-            });
-            
-            // 表单提交
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const formData = {
-                    old_password: document.getElementById('old_password').value,
-                    new_password1: document.getElementById('new_password1').value,
-                    new_password2: document.getElementById('new_password2').value
-                };
-                
-                try {
-                    const response = await fetch('{% url "change_password" %}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        },
-                        body: JSON.stringify(formData)
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        showToast(data.message || '密码修改成功');
-                        toggleModal(false);
-                        // 密码修改成功后延迟跳转到登录页
-                        setTimeout(() => {
-                            window.location.href = '{% url "login" %}';
-                        }, 1500);
-                    } else {
-                        showToast(data.message || '密码修改失败', 'error');
+            if (openBtn && typeof window.openChangePasswordModal === 'function') {
+                openBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // 关闭用户菜单
+                    const userMenu = document.getElementById('user-menu');
+                    if (userMenu) {
+                        userMenu.classList.add('hidden');
                     }
-                } catch (error) {
-                    showToast('网络错误，请稍后重试', 'error');
+                    // 打开修改密码模态框
+                    window.openChangePasswordModal();
+                });
+            }
+        });
+        
+        // 登出功能
+        document.getElementById('logout-link').addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '{% url "web:login" %}';
+                } else {
+                    alert(data.message || '登出失败');
                 }
-            });
+            } catch (error) {
+                console.error('登出错误:', error);
+                // 即使API调用失败，也跳转到登录页
+                window.location.href = '{% url "web:login" %}';
+            }
+        });
+        
+        // 获取Cookie的辅助函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 加载用户信息
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/user/profile', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const userData = data.data;
+                    
+                    // 更新用户名
+                    const usernameEl = document.getElementById('navbar-username');
+                    if (usernameEl) usernameEl.textContent = userData.username;
+                    
+                    // 更新头像
+                    if (userData.profile && userData.profile.avatar) {
+                        const avatarImg = document.getElementById('navbar-avatar-image');
+                        const avatarInitial = document.getElementById('navbar-avatar-initial');
+                        if (avatarImg && avatarInitial) {
+                            avatarImg.src = userData.profile.avatar;
+                            avatarImg.classList.remove('hidden');
+                            avatarInitial.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        }
+
+        // 页面加载时获取数据
+        window.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
         });
     </script>
 </body>
-</html> 
+</html>

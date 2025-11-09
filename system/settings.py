@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     
     # 自定义应用
     'app.user',  # User微服务应用
+    'app.web',   # Web视图应用
 ]
 
 MIDDLEWARE = [
@@ -187,6 +188,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 邮箱验证方式：'none', 'optiona
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True  # 注册时要求输入两次密码
 ACCOUNT_SESSION_REMEMBER = True  # 记住登录状态
 ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'  # 登出后重定向
+LOGIN_URL = '/login/'  # 未登录用户访问受保护页面时重定向到登录页
 LOGIN_REDIRECT_URL = '/user/home/'  # 登录后重定向
 
 # 邮箱设置

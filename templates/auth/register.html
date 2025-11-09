@@ -19,109 +19,416 @@
         }
     </script>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 relative overflow-hidden">
-    <!-- 动态背景效果 -->
-    <div class="absolute inset-0 z-0">
-        <div class="absolute -inset-[10px] opacity-50">
-            <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
-            <div class="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
-            <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+<body class="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden py-8">
+    <!-- 静态线条背景 -->
+    <div class="absolute inset-0 z-0 opacity-30">
+        <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#4f46e5" stroke-width="1"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        <!-- 装饰性线条 -->
+        <div class="absolute top-0 left-0 w-full h-full">
+            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="20%" x2="100%" y2="20%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="0" y1="40%" x2="100%" y2="40%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="0" y1="60%" x2="100%" y2="60%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="0" y1="80%" x2="100%" y2="80%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="20%" y1="0" x2="20%" y2="100%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="40%" y1="0" x2="40%" y2="100%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="60%" y1="0" x2="60%" y2="100%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+                <line x1="80%" y1="0" x2="80%" y2="100%" stroke="#6366f1" stroke-width="2" stroke-opacity="0.1"/>
+            </svg>
         </div>
     </div>
 
-    <div class="w-full max-w-md mx-auto p-8 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg relative z-10">
+    <div class="w-full max-w-md mx-auto p-8 bg-white rounded-xl shadow-xl relative z-10 border border-gray-100">
         <div class="text-center mb-8">
             {% include "components/system_title.html" %}
-            <h1 class="text-3xl font-bold text-primary mt-4">用户注册</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mt-4">用户注册</h1>
+            <p class="text-sm text-gray-500 mt-2">创建新账户，开始您的旅程</p>
         </div>
 
-        {% if messages %}
-        <div class="mb-6">
-            {% for message in messages %}
-            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-                {{ message }}
-            </div>
-            {% endfor %}
+        <!-- 消息提示区域 -->
+        <div id="message-container" class="mb-6 hidden">
+            <div id="message-content" class="p-4 rounded-lg"></div>
         </div>
-        {% endif %}
 
-        <form method="post" action="{% url 'register' %}" class="space-y-6">
+        <form id="register-form" class="space-y-5">
             {% csrf_token %}
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-user mr-2 text-gray-400"></i>用户名
+                </label>
                 <input 
                     type="text" 
                     id="username" 
                     name="username" 
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                    autocomplete="username"
+                    placeholder="请输入用户名"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
                 >
+                <p class="mt-1 text-xs text-gray-500">用户名将用于登录，请选择一个唯一的用户名</p>
             </div>
 
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">电子邮箱</label>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-envelope mr-2 text-gray-400"></i>电子邮箱
+                </label>
                 <input 
                     type="email" 
                     id="email" 
                     name="email" 
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                    autocomplete="email"
+                    placeholder="请输入电子邮箱"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
                 >
+                <p class="mt-1 text-xs text-gray-500">我们将发送验证邮件到此邮箱</p>
             </div>
 
             <div>
-                <label for="password1" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                <label for="password1" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-lock mr-2 text-gray-400"></i>密码
+                </label>
                 <input 
                     type="password" 
                     id="password1" 
                     name="password1" 
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                    autocomplete="new-password"
+                    placeholder="请输入密码"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
                 >
+                <p class="mt-1 text-xs text-gray-500">密码长度至少8位，建议包含字母和数字</p>
             </div>
 
             <div>
-                <label for="password2" class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                <label for="password2" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-lock mr-2 text-gray-400"></i>确认密码
+                </label>
                 <input 
                     type="password" 
                     id="password2" 
                     name="password2" 
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                    autocomplete="new-password"
+                    placeholder="请再次输入密码"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
                 >
+            </div>
+
+            <!-- 可选信息区域 -->
+            <div class="border-t border-gray-200 pt-5 mt-5">
+                <p class="text-sm font-medium text-gray-700 mb-4">可选信息（可在注册后补充）</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="nickname" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user-tag mr-2 text-gray-400"></i>昵称
+                        </label>
+                        <input 
+                            type="text" 
+                            id="nickname" 
+                            name="nickname" 
+                            autocomplete="nickname"
+                            placeholder="留空将自动生成：用户{随机数字}"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
+                        >
+                        <p class="mt-1 text-xs text-gray-500">留空将自动生成一个昵称</p>
+                    </div>
+
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-phone mr-2 text-gray-400"></i>电话号码
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            autocomplete="tel"
+                            placeholder="请输入电话号码（可选）"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="gender" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-venus-mars mr-2 text-gray-400"></i>性别
+                            </label>
+                            <select 
+                                id="gender" 
+                                name="gender" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
+                            >
+                                <option value="">请选择（可选）</option>
+                                <option value="male">男</option>
+                                <option value="female">女</option>
+                                <option value="other">其他</option>
+                                <option value="prefer_not_to_say">不愿透露</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-birthday-cake mr-2 text-gray-400"></i>出生日期
+                            </label>
+                            <input 
+                                type="date" 
+                                id="birth_date" 
+                                name="birth_date" 
+                                placeholder="YYYY-MM-DD"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 验证码区域 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-shield-alt mr-2 text-gray-400"></i>验证码
+                </label>
+                <div class="flex items-center space-x-3">
+                    <input 
+                        type="text" 
+                        id="captcha" 
+                        name="captcha" 
+                        required
+                        placeholder="请输入验证码"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 outline-none"
+                    >
+                    <div class="flex-shrink-0">
+                        <img 
+                            id="captcha-image" 
+                            src="" 
+                            alt="验证码" 
+                            class="h-12 w-32 border border-gray-300 rounded-lg cursor-pointer hover:border-primary transition duration-200"
+                            onclick="refreshCaptcha()"
+                            title="点击刷新验证码"
+                        >
+                    </div>
+                    <button 
+                        type="button" 
+                        onclick="refreshCaptcha()"
+                        class="flex-shrink-0 px-3 py-3 text-gray-600 hover:text-primary transition duration-200"
+                        title="刷新验证码"
+                    >
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="captcha-key" name="captcha_key">
+            </div>
+
+            <div class="flex items-start">
+                <input type="checkbox" id="terms" name="terms" required class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="terms" class="ml-2 text-sm text-gray-600">
+                    我已阅读并同意
+                    <a href="#" class="text-primary hover:text-indigo-600 hover:underline">服务条款</a>
+                    和
+                    <a href="#" class="text-primary hover:text-indigo-600 hover:underline">隐私政策</a>
+                </label>
             </div>
 
             <button 
                 type="submit" 
-                class="w-full py-3 px-4 bg-primary hover:bg-indigo-600 text-white font-medium rounded-lg transition duration-200 transform hover:scale-[1.02]"
+                id="register-btn"
+                class="w-full py-3 px-4 bg-primary hover:bg-indigo-600 text-white font-medium rounded-lg transition duration-200 transform hover:scale-[1.02] shadow-md hover:shadow-lg"
             >
-                注册
+                <i class="fas fa-user-plus mr-2"></i>注册
             </button>
         </form>
 
-        <div class="mt-6 text-center">
-            <a href="{% url 'login' %}" class="text-sm text-primary hover:text-indigo-600 hover:underline transition duration-200">
-                已有账号？立即登录
-            </a>
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="text-center text-sm text-gray-600">
+                已有账号？
+                <a href="{% url 'web:login' %}" class="text-primary hover:text-indigo-600 hover:underline font-medium ml-1">
+                    立即登录
+                </a>
+            </div>
         </div>
     </div>
 
-    <style>
-        @keyframes blob {
-            0% { transform: translate(0px, 0px) scale(1); }
-            33% { transform: translate(30px, -50px) scale(1.1); }
-            66% { transform: translate(-20px, 20px) scale(0.9); }
-            100% { transform: translate(0px, 0px) scale(1); }
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        // 页面加载时获取验证码
+        window.addEventListener('DOMContentLoaded', function() {
+            refreshCaptcha();
+        });
+
+        // 刷新验证码
+        async function refreshCaptcha() {
+            try {
+                const response = await fetch('/api/captcha/generate', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    document.getElementById('captcha-key').value = data.data.captcha_key;
+                    document.getElementById('captcha-image').src = data.data.captcha_image_url;
+                    document.getElementById('captcha').value = ''; // 清空验证码输入框
+                } else {
+                    showMessage('获取验证码失败，请刷新页面重试', 'error');
+                }
+            } catch (error) {
+                console.error('获取验证码错误:', error);
+                showMessage('获取验证码失败，请刷新页面重试', 'error');
+            }
         }
-        .animate-blob {
-            animation: blob 7s infinite;
+
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const btn = document.getElementById('register-btn');
+            const messageContainer = document.getElementById('message-container');
+            const messageContent = document.getElementById('message-content');
+            
+            // 获取表单数据
+            const formData = {
+                username: document.getElementById('username').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password1: document.getElementById('password1').value,
+                password2: document.getElementById('password2').value,
+                captcha: document.getElementById('captcha').value.trim(),
+                captcha_key: document.getElementById('captcha-key').value,
+                nickname: document.getElementById('nickname').value.trim() || null,
+                phone: document.getElementById('phone').value.trim() || null,
+                gender: document.getElementById('gender').value || null,
+                birth_date: document.getElementById('birth_date').value || null
+            };
+            
+            // 验证输入
+            if (!formData.username || !formData.email || !formData.password1 || !formData.password2) {
+                showMessage('请填写所有必填字段', 'error');
+                return;
+            }
+            
+            if (!formData.captcha || !formData.captcha_key) {
+                showMessage('请填写验证码', 'error');
+                return;
+            }
+            
+            if (!document.getElementById('terms').checked) {
+                showMessage('请同意服务条款和隐私政策', 'error');
+                return;
+            }
+            
+            if (formData.password1 !== formData.password2) {
+                showMessage('两次输入的密码不一致', 'error');
+                return;
+            }
+            
+            if (formData.password1.length < 8) {
+                showMessage('密码长度至少8位', 'error');
+                return;
+            }
+            
+            // 先验证验证码
+            try {
+                const verifyResponse = await fetch('/api/captcha/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        captcha: formData.captcha,
+                        captcha_key: formData.captcha_key
+                    })
+                });
+                
+                const verifyData = await verifyResponse.json();
+                
+                if (!verifyData.success) {
+                    showMessage(verifyData.message || '验证码错误，请重新输入', 'error');
+                    refreshCaptcha(); // 刷新验证码
+                    return;
+                }
+            } catch (error) {
+                console.error('验证码验证错误:', error);
+                showMessage('验证码验证失败，请重试', 'error');
+                refreshCaptcha(); // 刷新验证码
+                return;
+            }
+            
+            // 禁用按钮
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>注册中...';
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        username: formData.username,
+                        email: formData.email,
+                        password1: formData.password1,
+                        password2: formData.password2,
+                        nickname: formData.nickname,
+                        phone: formData.phone,
+                        gender: formData.gender,
+                        birth_date: formData.birth_date
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message || '注册成功！请登录', 'success');
+                    // 延迟跳转到登录页
+                    setTimeout(() => {
+                        window.location.href = '{% url "web:login" %}';
+                    }, 1500);
+                } else {
+                    showMessage(data.message || '注册失败', 'error');
+                    refreshCaptcha(); // 刷新验证码
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>注册';
+                }
+            } catch (error) {
+                console.error('注册错误:', error);
+                showMessage('网络错误，请稍后重试', 'error');
+                refreshCaptcha(); // 刷新验证码
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>注册';
+            }
+        });
+        
+        function showMessage(message, type) {
+            const messageContainer = document.getElementById('message-container');
+            const messageContent = document.getElementById('message-content');
+            
+            messageContainer.classList.remove('hidden');
+            messageContent.className = 'p-4 rounded-lg mb-3';
+            
+            if (type === 'error') {
+                messageContent.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                messageContent.innerHTML = '<div class="flex items-center"><i class="fas fa-exclamation-circle mr-2"></i>' + message + '</div>';
+            } else if (type === 'success') {
+                messageContent.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-200');
+                messageContent.innerHTML = '<div class="flex items-center"><i class="fas fa-check-circle mr-2"></i>' + message + '</div>';
+            } else {
+                messageContent.classList.add('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
+                messageContent.innerHTML = '<div class="flex items-center"><i class="fas fa-info-circle mr-2"></i>' + message + '</div>';
+            }
         }
-        .animation-delay-2000 {
-            animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-            animation-delay: 4s;
-        }
-    </style>
+    </script>
 </body>
-</html> 
+</html>

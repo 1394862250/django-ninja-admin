@@ -36,9 +36,17 @@ api = NinjaAPI(
 api.add_router("", user_api)  # 移除了"/api/"前缀
 
 urlpatterns = [
+    # Web应用路由
+    path('', include('app.web.urls')),
+    
+    # Django Admin
     path('admin/', admin.site.urls),
+    
+    # 第三方应用URL
     path('captcha/', include('captcha.urls')),  # Simple Captcha URL
     path('accounts/', include('allauth.urls')),  # Allauth URLs
+    
+    # API路由
     path('api/', api.urls),         # 注册Ninja API路由（包含/docs/和/redoc/）
 ]
 
