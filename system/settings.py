@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     
     # 自定义应用
     'app.user',  # User微服务应用
+    'app.notification',  # Notification微服务应用
 ]
 
 MIDDLEWARE = [

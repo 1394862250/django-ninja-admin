@@ -22,6 +22,7 @@ from ninja import NinjaAPI
 
 # 导入User微服务API
 from app.user.api import api as user_api
+from app.notification.api import api as notification_api
 
 # 创建主API实例
 api = NinjaAPI(
@@ -34,6 +35,7 @@ api = NinjaAPI(
 
 # 注册User微服务API到根路径
 api.add_router("", user_api)  # 移除了"/api/"前缀
+api.add_router("", notification_api)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
