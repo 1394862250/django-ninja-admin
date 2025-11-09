@@ -2,17 +2,14 @@
 用户模型扩展
 """
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.utils import timezone
-from django.conf import settings
 from model_utils.models import TimeStampedModel
 from model_utils import Choices
 from imagekit.models import ProcessedImageField, ImageSpecField
 from imagekit.processors import ResizeToFill
-from guardian.shortcuts import assign_perm, get_perms_for_model
-import os
 
 # 头像上传路径
 def user_avatar_path(instance, filename):
@@ -93,6 +90,13 @@ class UserProfile(TimeStampedModel):
     last_activity = models.DateTimeField(
         auto_now=True,
         verbose_name="最后活动时间"
+    )
+
+    roles = models.ManyToManyField(
+        'Role',
+        related_name='users',
+        blank=True,
+        verbose_name="用户角色"
     )
     
     class Meta:
@@ -233,6 +237,94 @@ class UserPermission(TimeStampedModel):
         if self.expires_at:
             return timezone.now() > self.expires_at
         return False
+
+
+class Role(TimeStampedModel):
+    """角色定义"""
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="角色标识"
+    )
+
+    display_name = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name="显示名称"
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="角色描述"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="是否启用"
+    )
+
+    metadata = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="角色元数据"
+    )
+
+    permissions = models.ManyToManyField(
+        Permission,
+        related_name='ninja_roles',
+        blank=True,
+        verbose_name="标准权限"
+    )
+
+    class Meta:
+        verbose_name = "角色"
+        verbose_name_plural = "角色"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.display_name or self.name
+
+    def get_custom_permission_types(self):
+        """获取角色绑定的自定义权限类型"""
+        return list(
+            self.custom_permission_links.values_list('permission_type', flat=True)
+        )
+
+
+class RolePermission(TimeStampedModel):
+    """角色自定义权限映射"""
+
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name='custom_permission_links',
+        verbose_name="角色"
+    )
+
+    permission_type = models.CharField(
+        max_length=30,
+        choices=UserPermission.PERMISSION_TYPES,
+        verbose_name="权限类型"
+    )
+
+    metadata = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="权限元数据"
+    )
+
+    class Meta:
+        verbose_name = "角色自定义权限"
+        verbose_name_plural = "角色自定义权限"
+        unique_together = [
+            ('role', 'permission_type')
+        ]
+
+    def __str__(self):
+        return f"{self.role} - {self.get_permission_type_display()}"
 
 
 class DocumentUpload(TimeStampedModel):
@@ -401,3 +493,79 @@ def revoke_user_permission(user, permission_type):
         return True
     except UserPermission.DoesNotExist:
         return False
+
+
+def _ensure_user_profile(user):
+    """确保用户拥有Profile对象"""
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return profile
+
+
+def assign_role_to_user(user, role, granted_by=None):
+    """为用户分配角色并同步权限"""
+    if not role.is_active:
+        return False
+
+    profile = _ensure_user_profile(user)
+    profile.roles.add(role)
+
+    if role.permissions.exists():
+        user.user_permissions.add(*role.permissions.all())
+
+    for permission_type in role.get_custom_permission_types():
+        grant_user_permission(user, permission_type, granted_by=granted_by)
+
+    return True
+
+
+def revoke_role_from_user(user, role):
+    """撤销用户角色并清理权限"""
+    if not hasattr(user, 'profile'):
+        return False
+
+    profile = user.profile
+    profile.roles.remove(role)
+
+    remaining_roles = profile.roles.filter(is_active=True)
+
+    if role.permissions.exists():
+        for permission in role.permissions.all():
+            if not remaining_roles.filter(permissions=permission).exists():
+                user.user_permissions.remove(permission)
+
+    for permission_type in role.get_custom_permission_types():
+        if not remaining_roles.filter(
+            custom_permission_links__permission_type=permission_type
+        ).exists():
+            revoke_user_permission(user, permission_type)
+
+    return True
+
+
+def set_role_custom_permissions(role, permission_types, metadata_map=None):
+    """更新角色的自定义权限配置"""
+    metadata_map = metadata_map or {}
+    existing_types = set(
+        role.custom_permission_links.values_list('permission_type', flat=True)
+    )
+    desired_types = set(permission_types or [])
+
+    RolePermission.objects.filter(
+        role=role,
+        permission_type__in=(existing_types - desired_types)
+    ).delete()
+
+    for permission_type in desired_types - existing_types:
+        RolePermission.objects.create(
+            role=role,
+            permission_type=permission_type,
+            metadata=metadata_map.get(permission_type)
+        )
+
+    for permission_type in desired_types & existing_types:
+        metadata = metadata_map.get(permission_type)
+        if metadata is not None:
+            RolePermission.objects.filter(
+                role=role,
+                permission_type=permission_type
+            ).update(metadata=metadata)

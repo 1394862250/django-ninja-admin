@@ -3,9 +3,9 @@ User微服务API接口
 集成Django Guardian、Django Allauth、Django ImageKit、Django Model Utils、Django Simple Captcha
 迁移原有15个接口并添加新功能
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple, Any
 from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.contrib.auth.hashers import check_password
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
@@ -22,13 +22,15 @@ import json
 # 导入工具和验证器
 from app.utils.validators import (
     UserLoginSchema, UserRegisterSchema, UserUpdateSchema, ChangePasswordSchema,
-    CaptchaRequestSchema, CaptchaVerifySchema
+    CaptchaRequestSchema, CaptchaVerifySchema, RoleCreateSchema, RoleUpdateSchema,
+    RoleAssignSchema
 )
 
 # 导入新模型
 from app.user.model import (
-    UserProfile, UserActivity, UserPermission, DocumentUpload,
-    check_user_permission, grant_user_permission, revoke_user_permission
+    UserProfile, UserActivity, UserPermission, DocumentUpload, Role,
+    check_user_permission, grant_user_permission, revoke_user_permission,
+    assign_role_to_user, revoke_role_from_user, set_role_custom_permissions
 )
 
 # Guardian权限管理
@@ -91,6 +93,100 @@ def check_admin_permission(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return error_response("需要管理员权限", status_code=403)
     return None
+
+
+def resolve_standard_permissions(identifiers: List[str]) -> Tuple[List[Permission], List[str]]:
+    """解析标准权限标识"""
+    resolved: List[Permission] = []
+    missing: List[str] = []
+    seen: set = set()
+
+    for identifier in identifiers or []:
+        if not identifier:
+            continue
+        identifier = identifier.strip()
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+
+        if '.' in identifier:
+            app_label, codename = identifier.split('.', 1)
+            permission = Permission.objects.filter(
+                content_type__app_label=app_label.strip(),
+                codename=codename.strip()
+            ).first()
+        else:
+            permission = Permission.objects.filter(
+                codename=identifier
+            ).first()
+
+        if permission:
+            resolved.append(permission)
+        else:
+            missing.append(identifier)
+
+    return resolved, missing
+
+
+def validate_custom_permission_types(permission_types: List[str]) -> Tuple[List[str], List[str]]:
+    """验证自定义权限类型是否有效"""
+    choices_source = getattr(UserPermission.PERMISSION_TYPES, '_db_values', None)
+    if choices_source is None:
+        choices_source = [
+            choice[0] for choice in getattr(UserPermission.PERMISSION_TYPES, '_triples', [])
+        ]
+    valid_choices = set(choices_source)
+    cleaned: List[str] = []
+    invalid: List[str] = []
+
+    for permission_type in permission_types or []:
+        if not permission_type:
+            continue
+        if permission_type in cleaned:
+            continue
+        if permission_type not in valid_choices:
+            invalid.append(permission_type)
+            continue
+        cleaned.append(permission_type)
+
+    return cleaned, invalid
+
+
+def serialize_role(role: Role) -> Dict[str, Any]:
+    """序列化角色信息"""
+    return {
+        'id': role.id,
+        'name': role.name,
+        'display_name': role.display_name,
+        'description': role.description,
+        'is_active': role.is_active,
+        'metadata': role.metadata or {},
+        'permissions': [
+            {
+                'id': perm.id,
+                'codename': perm.codename,
+                'name': perm.name,
+                'app_label': perm.content_type.app_label,
+                'model': perm.content_type.model,
+            }
+            for perm in role.permissions.all()
+        ],
+        'custom_permissions': [
+            {
+                'type': link.permission_type,
+                'display': link.get_permission_type_display(),
+                'metadata': link.metadata or {},
+            }
+            for link in role.custom_permission_links.all()
+        ],
+        'created': role.created,
+        'modified': role.modified,
+    }
+
+
+def get_role_with_relations(role_id: int) -> Role:
+    """获取包含关联数据的角色"""
+    return Role.objects.prefetch_related('permissions', 'custom_permission_links').get(id=role_id)
 
 
 # ===== 验证码相关接口 (2个) =====
@@ -984,5 +1080,310 @@ def toggle_user_status(request, user_id: int):
     except Exception as exc:
         return error_response(
             message=f"修改用户状态失败: {str(exc)}",
+            status_code=500
+        )
+
+
+# ===== 角色管理接口 =====
+
+@api.get("/roles")
+def list_roles(request, page: int = 1, page_size: int = 10, search: Optional[str] = None, include_inactive: bool = True):
+    """角色列表"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        roles_query = Role.objects.all().order_by('name')
+
+        if not include_inactive:
+            roles_query = roles_query.filter(is_active=True)
+
+        if search:
+            roles_query = roles_query.filter(
+                Q(name__icontains=search) |
+                Q(display_name__icontains=search)
+            )
+
+        paginator = Paginator(roles_query, page_size)
+        page_obj = paginator.get_page(page)
+
+        role_data = [serialize_role(role) for role in page_obj]
+
+        return success_response(
+            data={
+                'roles': role_data,
+                'page': page_obj.number,
+                'page_size': page_size,
+                'total_count': paginator.count,
+                'total_pages': paginator.num_pages
+            },
+            message="获取角色列表成功"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"获取角色列表失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.get("/roles/{role_id}")
+def get_role(request, role_id: int):
+    """角色详情"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        role = get_role_with_relations(role_id)
+        return success_response(
+            data=serialize_role(role),
+            message="获取角色详情成功"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"获取角色详情失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.post("/roles")
+def create_role(request, data: RoleCreateSchema):
+    """创建角色"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        if Role.objects.filter(name=data.name).exists():
+            return error_response("角色标识已存在", status_code=400)
+
+        permissions, missing = resolve_standard_permissions(data.permissions)
+        if missing:
+            return error_response(
+                message=f"以下权限不存在: {', '.join(missing)}",
+                status_code=400
+            )
+
+        custom_permissions, invalid_custom = validate_custom_permission_types(data.custom_permissions)
+        if invalid_custom:
+            return error_response(
+                message=f"无效的自定义权限: {', '.join(invalid_custom)}",
+                status_code=400
+            )
+
+        role = Role.objects.create(
+            name=data.name,
+            display_name=data.display_name,
+            description=data.description,
+            is_active=data.is_active,
+            metadata=data.metadata,
+        )
+
+        if permissions:
+            role.permissions.set(permissions)
+
+        set_role_custom_permissions(role, custom_permissions)
+
+        role = get_role_with_relations(role.id)
+
+        return success_response(
+            data=serialize_role(role),
+            message="角色创建成功",
+            status_code=201
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"创建角色失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.put("/roles/{role_id}")
+def update_role(request, role_id: int, data: RoleUpdateSchema):
+    """更新角色"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        role = Role.objects.get(id=role_id)
+
+        if data.name and Role.objects.exclude(id=role_id).filter(name=data.name).exists():
+            return error_response("角色标识已存在", status_code=400)
+
+        if data.name:
+            role.name = data.name
+        if data.display_name is not None:
+            role.display_name = data.display_name
+        if data.description is not None:
+            role.description = data.description
+        if data.is_active is not None:
+            role.is_active = data.is_active
+        if data.metadata is not None:
+            role.metadata = data.metadata
+
+        role.save()
+
+        if data.permissions is not None:
+            permissions, missing = resolve_standard_permissions(data.permissions)
+            if missing:
+                return error_response(
+                    message=f"以下权限不存在: {', '.join(missing)}",
+                    status_code=400
+                )
+            role.permissions.set(permissions)
+
+        if data.custom_permissions is not None:
+            custom_permissions, invalid_custom = validate_custom_permission_types(data.custom_permissions)
+            if invalid_custom:
+                return error_response(
+                    message=f"无效的自定义权限: {', '.join(invalid_custom)}",
+                    status_code=400
+                )
+            set_role_custom_permissions(role, custom_permissions)
+
+        role = get_role_with_relations(role.id)
+
+        return success_response(
+            data=serialize_role(role),
+            message="角色更新成功"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"更新角色失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.delete("/roles/{role_id}")
+def delete_role(request, role_id: int, hard: bool = False):
+    """删除或禁用角色"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        role = Role.objects.get(id=role_id)
+
+        if hard:
+            role.delete()
+            return success_response(
+                data={'deleted': True},
+                message="角色已删除"
+            )
+
+        role.is_active = False
+        role.save(update_fields=['is_active'])
+        role = get_role_with_relations(role.id)
+
+        return success_response(
+            data=serialize_role(role),
+            message="角色已禁用"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"删除角色失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.post("/roles/{role_id}/assign")
+def assign_role(request, role_id: int, data: RoleAssignSchema):
+    """分配角色给用户"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        role = Role.objects.get(id=role_id)
+        user = User.objects.get(id=data.user_id)
+
+        if hasattr(user, 'profile') and user.profile.roles.filter(id=role.id).exists():
+            return error_response("用户已拥有该角色", status_code=400)
+
+        success = assign_role_to_user(user, role, granted_by=request.user)
+        if not success:
+            return error_response("角色未启用，无法分配", status_code=400)
+
+        try:
+            UserActivity.objects.create(
+                user=user,
+                activity_type='admin_action',
+                description=f'角色 {role.name} 分配给 {user.username}',
+                metadata={'role_id': role.id, 'admin_id': request.user.id}
+            )
+        except Exception:
+            pass
+
+        return success_response(
+            data={'user_id': user.id, 'role': serialize_role(get_role_with_relations(role.id))},
+            message="角色分配成功"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except User.DoesNotExist:
+        return error_response("用户不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"分配角色失败: {str(exc)}",
+            status_code=500
+        )
+
+
+@api.post("/roles/{role_id}/revoke")
+def revoke_role(request, role_id: int, data: RoleAssignSchema):
+    """撤销用户角色"""
+    try:
+        admin_check = check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        role = Role.objects.get(id=role_id)
+        user = User.objects.get(id=data.user_id)
+
+        if not hasattr(user, 'profile') or not user.profile.roles.filter(id=role.id).exists():
+            return error_response("用户未拥有该角色", status_code=400)
+
+        revoke_role_from_user(user, role)
+
+        try:
+            UserActivity.objects.create(
+                user=user,
+                activity_type='admin_action',
+                description=f'撤销角色 {role.name} 自 {user.username}',
+                metadata={'role_id': role.id, 'admin_id': request.user.id}
+            )
+        except Exception:
+            pass
+
+        return success_response(
+            data={'user_id': user.id, 'role_id': role.id},
+            message="角色撤销成功"
+        )
+
+    except Role.DoesNotExist:
+        return error_response("角色不存在", status_code=404)
+    except User.DoesNotExist:
+        return error_response("用户不存在", status_code=404)
+    except Exception as exc:
+        return error_response(
+            message=f"撤销角色失败: {str(exc)}",
             status_code=500
         )

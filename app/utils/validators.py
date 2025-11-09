@@ -1,7 +1,7 @@
 """
 数据验证器
 """
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 from pydantic import BaseModel, EmailStr, validator
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -156,3 +156,54 @@ class CaptchaVerifySchema(BaseModel):
         if not v or not v.strip():
             raise ValueError('验证码键不能为空')
         return v.strip()
+
+
+class RoleBaseSchema(BaseModel):
+    """角色基础验证"""
+
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    metadata: Optional[Dict[str, Any]] = None
+    permissions: Optional[List[str]] = None
+    custom_permissions: Optional[List[str]] = None
+
+    @validator('permissions', 'custom_permissions', pre=True, always=True)
+    def default_list(cls, v):
+        return v or []
+
+
+class RoleCreateSchema(RoleBaseSchema):
+    """角色创建验证"""
+
+    name: str
+
+    @validator('name')
+    def name_must_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('角色标识不能为空')
+        return v.strip()
+
+
+class RoleUpdateSchema(RoleBaseSchema):
+    """角色更新验证"""
+
+    name: Optional[str] = None
+
+    @validator('name')
+    def name_if_provided(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('角色标识不能为空')
+        return v.strip() if v else v
+
+
+class RoleAssignSchema(BaseModel):
+    """角色分配验证"""
+
+    user_id: int
+
+    @validator('user_id')
+    def user_must_exist(cls, v):
+        if not User.objects.filter(id=v).exists():
+            raise ValueError('目标用户不存在')
+        return v
