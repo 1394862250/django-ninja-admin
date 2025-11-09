@@ -2,15 +2,34 @@
 User微服务测试模块
 """
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.test.client import RequestFactory
 from django.contrib.auth.models import AnonymousUser
 import json
 
 # 导入API模块
-from app.user.api import login_user, register_user, logout_user, get_user_profile, change_password, admin_dashboard, list_users
+from app.user.api import (
+    login_user,
+    register_user,
+    logout_user,
+    get_user_profile,
+    change_password,
+    admin_dashboard,
+    list_users,
+    create_role,
+    assign_role,
+    revoke_role,
+)
 # 导入验证器
-from app.utils.validators import UserLoginSchema, UserRegisterSchema, UserUpdateSchema, ChangePasswordSchema
+from app.utils.validators import (
+    UserLoginSchema,
+    UserRegisterSchema,
+    UserUpdateSchema,
+    ChangePasswordSchema,
+    RoleCreateSchema,
+    RoleAssignSchema,
+)
+from app.user.model import Role, UserPermission, RolePermission
 
 
 class UserApiTestCase(TestCase):
@@ -212,3 +231,96 @@ class UserPermissionsTestCase(TestCase):
         request.user = self.regular_user
         response = get_user_profile(request)
         self.assertEqual(response.status_code, 200)
+
+
+class RoleManagementApiTestCase(TestCase):
+    """角色管理API测试用例"""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin_user = User.objects.create_user(
+            username='admin_role',
+            email='admin-role@example.com',
+            password='admin123',
+            is_staff=True,
+        )
+        self.regular_user = User.objects.create_user(
+            username='role_user',
+            email='role-user@example.com',
+            password='user123',
+        )
+        self.permission = Permission.objects.filter(codename='add_user').first()
+        if self.permission is None:
+            self.fail('测试所需的权限不存在: auth.add_user')
+
+    def _create_role(self, name='manager'):
+        data = RoleCreateSchema(
+            name=name,
+            display_name='Manager',
+            description='Manage users',
+            permissions=[
+                f'{self.permission.content_type.app_label}.{self.permission.codename}'
+            ],
+        )
+        request = self.factory.post('/api/admin/roles')
+        request.user = self.admin_user
+        response = create_role(request, data)
+        if response.status_code != 201:
+            payload = json.loads(response.content)
+            self.fail(payload.get('message'))
+        return Role.objects.get(name=name)
+
+    def test_non_admin_cannot_create_role(self):
+        data = RoleCreateSchema(name='support')
+        request = self.factory.post('/api/admin/roles')
+        request.user = self.regular_user
+        response = create_role(request, data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_create_role_with_permissions(self):
+        role = self._create_role(name='supervisor')
+        self.assertTrue(role.permissions.filter(id=self.permission.id).exists())
+        self.assertFalse(role.custom_permission_links.exists())
+
+    def test_assign_role_applies_permissions(self):
+        role = self._create_role()
+        RolePermission.objects.create(role=role, permission_type='user_management')
+        assign_request = self.factory.post(f'/api/admin/roles/{role.id}/assign')
+        assign_request.user = self.admin_user
+        data = RoleAssignSchema(user_id=self.regular_user.id)
+        response = assign_role(assign_request, role.id, data)
+        self.assertEqual(response.status_code, 200)
+
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.profile.roles.filter(id=role.id).exists())
+        self.assertTrue(
+            self.regular_user.user_permissions.filter(id=self.permission.id).exists()
+        )
+        permission_record = UserPermission.objects.get(
+            user=self.regular_user, permission_type='user_management'
+        )
+        self.assertTrue(permission_record.granted)
+
+    def test_revoke_role_removes_permissions(self):
+        role = self._create_role()
+        RolePermission.objects.create(role=role, permission_type='user_management')
+        assign_request = self.factory.post(f'/api/admin/roles/{role.id}/assign')
+        assign_request.user = self.admin_user
+        assign_role(assign_request, role.id, RoleAssignSchema(user_id=self.regular_user.id))
+
+        revoke_request = self.factory.post(f'/api/admin/roles/{role.id}/revoke')
+        revoke_request.user = self.admin_user
+        response = revoke_role(
+            revoke_request, role.id, RoleAssignSchema(user_id=self.regular_user.id)
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.regular_user.refresh_from_db()
+        self.assertFalse(self.regular_user.profile.roles.filter(id=role.id).exists())
+        self.assertFalse(
+            self.regular_user.user_permissions.filter(id=self.permission.id).exists()
+        )
+        permission_record = UserPermission.objects.get(
+            user=self.regular_user, permission_type='user_management'
+        )
+        self.assertFalse(permission_record.granted)
