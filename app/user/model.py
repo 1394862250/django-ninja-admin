@@ -3,13 +3,13 @@
 """
 from django.db import models
 from django.contrib.auth.models import User
-from django.dispatch import receiver
-from django.db.models.signals import post_save
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
 from model_utils import Choices
-from imagekit.models import ProcessedImageField, ImageSpecField
-from imagekit.processors import ResizeToFill
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import os
 
 # 头像上传路径
 def user_avatar_path(instance, filename):
@@ -57,24 +57,52 @@ class UserProfile(TimeStampedModel):
         verbose_name="出生日期"
     )
     
-    # 头像相关
-    avatar = ProcessedImageField(
+    # 头像字段 - 使用标准Django ImageField
+    avatar = models.ImageField(
         upload_to=user_avatar_path,
         blank=True,
         null=True,
-        verbose_name="头像",
-        processors=[ResizeToFill(300, 300)],
-        format='JPEG',
-        options={'quality': 90}
+        verbose_name="头像"
     )
     
-    # ImageKit 自动生成缩略图
-    avatar_thumbnail = ImageSpecField(
-        source='avatar',
-        processors=[ResizeToFill(100, 100)],
-        format='JPEG',
-        options={'quality': 90}
-    )
+    # 头像缩略图 - 不存储在数据库，只在访问时动态生成
+    @property
+    def avatar_thumbnail(self):
+        """动态生成头像缩略图"""
+        if not self.avatar:
+            return None
+        
+        try:
+            # 打开原始图片
+            img = Image.open(self.avatar)
+            
+            # 转换为RGB模式（如果需要）
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # 创建缩略图 (100x100)
+            img.thumbnail((100, 100), Image.Resampling.LANCZOS)
+            
+            # 保存到内存
+            thumb_io = BytesIO()
+            img.save(thumb_io, format='JPEG', quality=90, optimize=True)
+            thumb_io.seek(0)
+    
+            # 创建新的图片文件
+            thumb_name = f"thumb_{self.avatar.name.split('/')[-1]}"
+            thumb_file = InMemoryUploadedFile(
+                thumb_io,
+                None,
+                thumb_name,
+                'image/jpeg',
+                thumb_io.tell(),
+                None
+            )
+            
+            return thumb_file
+        except Exception as e:
+            print(f"缩略图生成失败: {e}")
+            return None
     
     # 状态和统计
     STATUS_CHOICES = [
@@ -130,6 +158,15 @@ class UserProfile(TimeStampedModel):
         self.login_count += 1
         self.last_activity = timezone.now()
         self.save(update_fields=['login_count', 'last_activity'])
+
+    def delete_avatar(self):
+        """删除头像文件"""
+        if self.avatar:
+            # 删除物理文件
+            if os.path.exists(self.avatar.path):
+                os.remove(self.avatar.path)
+            self.avatar = None
+            self.save()
 
 
 class UserActivity(TimeStampedModel):
@@ -269,30 +306,4 @@ class DocumentUpload(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.file_name}"
-
-
-# 信号处理器
-
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    """用户创建时自动创建用户资料"""
-    if created:
-        try:
-            UserProfile.objects.create(user=instance)
-        except Exception as e:
-            # 如果创建失败，记录错误但不阻止用户创建
-            print(f"创建用户资料失败: {e}")
-
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    """用户更新时自动保存用户资料"""
-    if hasattr(instance, 'profile'):
-        try:
-            instance.profile.save()
-        except Exception as e:
-            print(f"保存用户资料失败: {e}")
-
-
-# 辅助函数
 

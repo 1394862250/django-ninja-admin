@@ -6,6 +6,7 @@
     <title>{% block title %}系统管理平台{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -44,7 +45,7 @@
                                     <img id="navbar-avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
                                 </div>
                                 <div class="hidden md:block text-sm text-gray-700 dark:text-gray-300">
-                                    <span id="navbar-username">{{ user.username }}</span>
+                                    <span id="navbar-username">{{ user.profile.nickname|default:user.username }}</span>
                                 </div>
                                 <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
                             </button>
@@ -170,13 +171,13 @@
             }
             });
             
-        // 登出功能
-        document.getElementById('logout-link').addEventListener('click', async function(e) {
-                e.preventDefault();
-                
-            if (!confirm('确定要退出登录吗？')) {
-                return;
-            }
+          // 登出功能
+          document.getElementById('logout-link').addEventListener('click', async function(e) {
+                  e.preventDefault();
+                  
+                  if (!await showConfirm('确定要退出登录吗？')) {
+                      return;
+                  }
                 
                 try {
                 const response = await fetch('/api/auth/logout', {
@@ -193,7 +194,7 @@
                 if (data.success) {
                     window.location.href = '{% url "web:login" %}';
                     } else {
-                    alert(data.message || '登出失败');
+                    showError(data.message || '登出失败', {title: '登出失败'});
                 }
             } catch (error) {
                 console.error('登出错误:', error);
@@ -231,9 +232,12 @@
                 if (data.success && data.data) {
                     const userData = data.data;
                     
-                    // 更新用户名
+                    // 更新用户名（显示昵称）
                     const usernameEl = document.getElementById('navbar-username');
-                    if (usernameEl) usernameEl.textContent = userData.username;
+                    if (usernameEl) {
+                        const displayName = userData.profile && userData.profile.nickname ? userData.profile.nickname : userData.username;
+                        usernameEl.textContent = displayName;
+                    }
                     
                     // 更新头像
                     if (userData.profile && userData.profile.avatar) {
@@ -256,5 +260,8 @@
             loadCurrentUser();
         });
     </script>
+    
+    <!-- 统一提示框组件 -->
+    {% include "components/alert_components.html" %}
 </body>
 </html> 

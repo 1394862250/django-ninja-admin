@@ -48,14 +48,7 @@ INSTALLED_APPS = [
     'allauth.account',  # 账户管理
     'allauth.socialaccount',  # 社交登录
     'guardian',  # Django Guardian - 对象级权限
-    
-    # 媒体文件处理
-    'imagekit',  # Django ImageKit - 图片处理
-    
-    # 模型工具
     'model_utils',  # Django Model Utils - 模型工具
-    
-    # 验证码系统
     'captcha',  # Django Simple Captcha - 验证码
     
     # 自定义应用
@@ -132,16 +125,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'zh-hans'
-
 TIME_ZONE = 'Asia/Shanghai'
-
 USE_I18N = True
-
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
@@ -199,13 +185,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # 开发环境
 # Django Guardian 设置
 # ==================
 # 对象级权限 - 在AUTHENTICATION_BACKENDS中已配置
-
-# ==================
-# Django ImageKit 设置
-# ==================
-# 图片处理配置
-IMAGEKIT_DEFAULT_CACHEFILE_BACKEND = 'imagekit.backends.cacheback.ImageSpecField'
-IMAGEKIT_DEFAULT_CACHEFILE_STRATEGY = 'imagekit.strategies.cacheback.cached_writes'
 
 # ==================
 # Django Model Utils 设置

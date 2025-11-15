@@ -6,6 +6,7 @@
     <title>{% block title %}管理后台 - 系统管理平台{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -67,6 +68,9 @@
 
     <!-- 通知模态框组件 -->
     {% include "components/notification_modal.html" %}
+    
+    <!-- 统一提示框组件 -->
+    {% include "components/alert_components.html" %}
 
     <!-- 主内容区 -->
         <div class="flex-1 ml-64">
@@ -96,7 +100,7 @@
                                             <img id="admin-navbar-avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
                                         </div>
                                         <div class="hidden md:block text-sm">
-                                            <div id="admin-navbar-username" class="font-medium text-gray-900 dark:text-gray-100 text-xs">{{ user.username }}</div>
+                                            <div id="admin-navbar-username" class="font-medium text-gray-900 dark:text-gray-100 text-xs">{{ user.profile.nickname|default:user.username }}</div>
                                         </div>
                                         <i class="fas fa-chevron-down text-gray-400 dark:text-gray-500 text-xs"></i>
                                     </button>
@@ -112,7 +116,7 @@
                                                 <img id="admin-menu-avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <div id="admin-menu-username" class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ user.username }}</div>
+                                                <div id="admin-menu-username" class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ user.profile.nickname|default:user.username }}</div>
                                                 <div id="admin-menu-email" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email|default:"未设置邮箱" }}</div>
                                             </div>
                                         </div>
@@ -215,13 +219,19 @@
                 if (data.success && data.data) {
                     const userData = data.data;
                     
-                    // 更新顶部导航栏用户名
+                    // 更新顶部导航栏用户名（显示昵称）
                     const navbarUsernameEl = document.getElementById('admin-navbar-username');
-                    if (navbarUsernameEl) navbarUsernameEl.textContent = userData.username;
+                    if (navbarUsernameEl) {
+                        const displayName = userData.profile && userData.profile.nickname ? userData.profile.nickname : userData.username;
+                        navbarUsernameEl.textContent = displayName;
+                    }
                     
                     // 更新下拉菜单用户名
                     const menuUsernameEl = document.getElementById('admin-menu-username');
-                    if (menuUsernameEl) menuUsernameEl.textContent = userData.username;
+                    if (menuUsernameEl) {
+                        const displayName = userData.profile && userData.profile.nickname ? userData.profile.nickname : userData.username;
+                        menuUsernameEl.textContent = displayName;
+                    }
                     
                     // 更新下拉菜单邮箱
                     const menuEmailEl = document.getElementById('admin-menu-email');
@@ -327,6 +337,9 @@
                 headerLogoutLink.addEventListener('click', async function(e) {
                     e.preventDefault();
                     adminUserMenu.classList.add('hidden'); // 关闭下拉菜单
+                    if (!await showConfirm('确定要退出登录吗？')) {
+                        return;
+                    }
                     await handleLogout();
                 });
             }
@@ -334,10 +347,6 @@
         
         // 登出处理函数
         async function handleLogout() {
-            if (!confirm('确定要退出登录吗？')) {
-                return;
-            }
-            
             try {
                 const response = await fetch('/api/auth/logout', {
                         method: 'POST',
@@ -353,7 +362,7 @@
                 if (data.success) {
                     window.location.href = '{% url "web:login" %}';
                     } else {
-                    alert(data.message || '登出失败');
+                    showError(data.message || '登出失败', {title: '登出失败'});
                 }
             } catch (error) {
                 console.error('登出错误:', error);

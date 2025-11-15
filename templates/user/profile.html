@@ -6,9 +6,18 @@
 
 {% block content %}
 <div class="p-6">
-    <div class="mb-8">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">个人信息</h1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">查看和管理您的个人信息</p>
+        </div>
+        <div>
+            <a href="{% url 'web:user_home' %}" 
+               class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                <i class="fas fa-arrow-left mr-2"></i>
+                返回首页
+            </a>
+        </div>
     </div>
 
     {% include "components/profile.html" %}
@@ -43,7 +52,7 @@
                     if (data.success) {
                         window.location.href = '{% url "web:login" %}';
                     } else {
-                        alert(data.message || '登出失败');
+                        showError(data.message || '登出失败', {title: '登出失败'});
                     }
                 } catch (error) {
                     console.error('登出错误:', error);

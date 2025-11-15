@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from ninja import NinjaAPI
 
 # 导入User微服务API
-from app.user.api import api as user_api
+from app.user.api import create_user_api_router
 from app.notification.api import api as notification_api
 
 # 创建主API实例
@@ -34,6 +34,7 @@ api = NinjaAPI(
 )
 
 # 注册User微服务API到根路径
+user_api = create_user_api_router()
 api.add_router("", user_api)  # 移除了"/api/"前缀
 api.add_router("", notification_api)
 

@@ -151,7 +151,6 @@ def notification_create_view(request):
     }
     return render_template(request, 'manage/notification_create.html', context)
 
-
 # ===== 通用视图函数 =====
 
 def index_view(request):

@@ -197,13 +197,13 @@
         
         // 验证文件类型
         if (!file.type.startsWith('image/')) {
-            alert('只能上传图片文件');
+            showFileError('只能上传图片文件');
             return;
         }
         
         // 验证文件大小 (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('文件大小不能超过5MB');
+            showFileError('文件大小不能超过5MB');
             return;
         }
         
@@ -231,13 +231,13 @@
                     avatarImg.classList.remove('hidden');
                     avatarInitial.classList.add('hidden');
                 }
-                alert('头像上传成功');
+                showFileSuccess('头像上传成功');
             } else {
-                alert(data.message || '头像上传失败');
+                showFileError(data.message || '头像上传失败');
             }
         } catch (error) {
             console.error('上传头像失败:', error);
-            alert('上传失败，请重试');
+            showFileError('上传失败，请重试');
         }
         
         // 清空文件输入
@@ -274,14 +274,14 @@
             const data = await response.json();
             
             if (data.success) {
-                alert('个人资料更新成功');
+                showSuccess('个人资料更新成功', {title: '更新成功'});
                 loadUserProfile(); // 重新加载数据
             } else {
-                alert(data.message || '更新失败');
+                showError(data.message || '更新失败', {title: '更新失败'});
             }
         } catch (error) {
             console.error('更新个人资料失败:', error);
-            alert('更新失败，请重试');
+            showError('更新失败，请重试', {title: '更新失败'});
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
@@ -316,7 +316,7 @@
             if (data.success) {
                 window.location.href = '{% url "web:login" %}';
             } else {
-                alert(data.message || '登出失败');
+                showError(data.message || '登出失败', {title: '登出失败'});
             }
         } catch (error) {
             console.error('登出错误:', error);
