@@ -1,0 +1,678 @@
+{% extends "manage/base_admin.html" %}
+
+{% block title %}日志管理 - 系统管理平台{% endblock %}
+
+{% block page_title %}日志管理{% endblock %}
+
+{% block admin_content %}
+<!-- 页面标题和操作按钮 -->
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">日志管理</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">查看和管理系统操作日志，追踪系统活动记录</p>
+    </div>
+    <button id="refresh-btn" class="inline-flex items-center px-4 py-2 bg-orange-500 dark:bg-gray-700 text-white text-sm font-semibold rounded focus:outline-none">
+        <i class="fas fa-sync-alt mr-2"></i>
+        刷新数据
+    </button>
+</div>
+
+<!-- 统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- 总日志数 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-list text-gray-700 dark:text-gray-300"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">总日志数</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="total-count">0</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                系统总日志记录数
+            </span>
+        </div>
+    </div>
+    
+    <!-- 今日日志 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-calendar-day text-gray-700 dark:text-gray-300"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">今日日志</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="today-count">0</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                今日产生的日志数
+            </span>
+        </div>
+    </div>
+    
+    <!-- 近7天日志 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-calendar-week text-gray-700 dark:text-gray-300"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">近7天日志</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="recent-count">0</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                最近7天的日志数
+            </span>
+        </div>
+    </div>
+    
+    <!-- 错误日志 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded bg-gray-100 dark:bg-gray-700">
+                <i class="fas fa-exclamation-triangle text-gray-700 dark:text-gray-300"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">错误日志</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100" id="error-count">0</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+                系统错误日志数量
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- 过滤器 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">过滤条件</h3>
+    <form id="filter-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="level-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">日志级别</label>
+            <select id="level-filter" name="level" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                <option value="">全部</option>
+                <option value="DEBUG">调试</option>
+                <option value="INFO">信息</option>
+                <option value="WARNING">警告</option>
+                <option value="ERROR">错误</option>
+                <option value="CRITICAL">严重</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="category-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">日志类别</label>
+            <select id="category-filter" name="category" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                <option value="">全部</option>
+                <option value="auth">认证</option>
+                <option value="user">用户</option>
+                <option value="system">系统</option>
+                <option value="api">API</option>
+                <option value="admin">管理</option>
+                <option value="notification">通知</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="action-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">操作动作</label>
+            <input type="text" id="action-filter" name="action" placeholder="搜索操作动作" 
+                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+        </div>
+        
+        <div>
+            <label for="ip-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IP地址</label>
+            <input type="text" id="ip-filter" name="ip_address" placeholder="搜索IP地址" 
+                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+        </div>
+        
+        <div>
+            <label for="start-date-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">开始日期</label>
+            <input type="date" id="start-date-filter" name="start_date" 
+                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+        </div>
+        
+        <div>
+            <label for="end-date-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">结束日期</label>
+            <input type="date" id="end-date-filter" name="end_date" 
+                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+        </div>
+        
+        <div>
+            <label for="method-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">请求方法</label>
+            <select id="method-filter" name="method" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                <option value="">全部</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="status-code-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">状态码</label>
+            <input type="number" id="status-code-filter" name="status_code" placeholder="如: 200, 404" 
+                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+        </div>
+        
+        <div class="md:col-span-2 lg:col-span-4 flex justify-end space-x-2">
+            <button type="button" id="reset-filter-btn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                重置
+            </button>
+            <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                搜索
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 日志列表 -->
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">日志列表</h3>
+        <div class="flex space-x-2">
+            <button id="batch-delete-btn" class="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 text-sm">
+                <i class="fas fa-trash-alt mr-1"></i> 批量删除
+            </button>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">级别</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">类别</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">用户</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">消息</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">IP地址</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+                </tr>
+            </thead>
+            <tbody id="logs-table-body" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- 日志数据将通过JavaScript动态加载 -->
+                <tr>
+                    <td colspan="9" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        正在加载日志数据...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分页 -->
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            显示 <span id="page-start">0</span> - <span id="page-end">0</span> 条，共 <span id="total-items">0</span> 条
+        </div>
+        <div class="flex space-x-1" id="pagination">
+            <!-- 分页按钮将通过JavaScript动态生成 -->
+        </div>
+    </div>
+</div>
+
+<!-- 日志详情模态框 -->
+<div id="log-detail-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">日志详情</h3>
+            <button id="close-log-detail-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="log-detail-content" class="space-y-4">
+            <!-- 日志详情将通过JavaScript动态加载 -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 全局变量
+    let currentPage = 1;
+    let currentFilters = {};
+    let selectedLogIds = [];
+    
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadLogStats();
+        loadLogs();
+        
+        // 绑定事件
+        document.getElementById('filter-form').addEventListener('submit', handleFilterSubmit);
+        document.getElementById('reset-filter-btn').addEventListener('click', resetFilters);
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            loadLogs();
+            loadLogStats();
+        });
+        document.getElementById('batch-delete-btn').addEventListener('click', handleBatchDelete);
+        document.getElementById('select-all-checkbox').addEventListener('change', handleSelectAll);
+        document.getElementById('close-log-detail-modal').addEventListener('click', closeLogDetailModal);
+    });
+    
+    // 加载日志统计信息
+    async function loadLogStats() {
+        try {
+            const response = await fetch('/api/logs/stats');
+            const data = await response.json();
+            
+            if (data) {
+                document.getElementById('total-count').textContent = data.total_count || 0;
+                document.getElementById('today-count').textContent = data.today_count || 0;
+                document.getElementById('recent-count').textContent = data.recent_count || 0;
+                document.getElementById('error-count').textContent = data.level_stats.ERROR || 0;
+            }
+        } catch (error) {
+            console.error('加载日志统计信息失败:', error);
+        }
+    }
+    
+    // 加载日志列表
+    async function loadLogs(page = 1) {
+        currentPage = page;
+        
+        try {
+            // 构建查询参数
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('per_page', 10); // 修改为每页10条记录
+            
+            // 添加过滤条件
+            Object.keys(currentFilters).forEach(key => {
+                if (currentFilters[key]) {
+                    params.append(key, currentFilters[key]);
+                }
+            });
+            
+            const response = await fetch(`/api/logs?${params}`);
+            const data = await response.json();
+            
+            if (data && data.items) {
+                renderLogsTable(data.items);
+                renderPagination(data);
+                updatePaginationInfo(data);
+            }
+        } catch (error) {
+            console.error('加载日志列表失败:', error);
+            showError('加载日志列表失败');
+        }
+    }
+    
+    // 渲染日志表格
+    function renderLogsTable(logs) {
+        const tbody = document.getElementById('logs-table-body');
+        
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        没有找到符合条件的日志
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = logs.map(log => {
+            const levelBadge = getLevelBadge(log.level);
+            const categoryBadge = getCategoryBadge(log.category);
+            const userDisplay = log.user_username || '-';
+            const timeDisplay = new Date(log.created).toLocaleString('zh-CN');
+            
+            return `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="log-checkbox rounded border-gray-300 text-orange-600 focus:ring-orange-500" 
+                            data-id="${log.id}" ${selectedLogIds.includes(log.id) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">${levelBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${categoryBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${userDisplay}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${log.action}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate" title="${log.message}">${log.message}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${log.ip_address || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${timeDisplay}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300" 
+                            onclick="showLogDetail(${log.id})">
+                            <i class="fas fa-eye"></i> 查看
+                        </button>
+                        <button class="ml-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300" 
+                            onclick="deleteLog(${log.id})">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        // 重新绑定复选框事件
+        document.querySelectorAll('.log-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', handleLogCheckboxChange);
+        });
+    }
+    
+    // 获取日志级别徽章
+    function getLevelBadge(level) {
+        const badges = {
+            'DEBUG': '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">调试</span>',
+            'INFO': '<span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">信息</span>',
+            'WARNING': '<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">警告</span>',
+            'ERROR': '<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">错误</span>',
+            'CRITICAL': '<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">严重</span>'
+        };
+        return badges[level] || level;
+    }
+    
+    // 获取日志类别徽章
+    function getCategoryBadge(category) {
+        const badges = {
+            'auth': '<span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">认证</span>',
+            'user': '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">用户</span>',
+            'system': '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">系统</span>',
+            'api': '<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">API</span>',
+            'admin': '<span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">管理</span>',
+            'notification': '<span class="px-2 py-1 text-xs rounded-full bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300">通知</span>',
+            'other': '<span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300">其他</span>'
+        };
+        return badges[category] || category;
+    }
+    
+    // 渲染分页
+    function renderPagination(data) {
+        const pagination = document.getElementById('pagination');
+        const { page, pages, has_previous, has_next } = data;
+        
+        let html = '';
+        
+        // 上一页
+        if (has_previous) {
+            html += `<button class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600" onclick="loadLogs(${page - 1})">上一页</button>`;
+        }
+        
+        // 页码
+        const startPage = Math.max(1, page - 2);
+        const endPage = Math.min(pages, page + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const isActive = i === page;
+            const buttonClass = isActive 
+                ? 'px-3 py-1 text-sm bg-orange-600 text-white rounded-md' 
+                : 'px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600';
+            
+            html += `<button class="${buttonClass}" onclick="loadLogs(${i})">${i}</button>`;
+        }
+        
+        // 下一页
+        if (has_next) {
+            html += `<button class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600" onclick="loadLogs(${page + 1})">下一页</button>`;
+        }
+        
+        pagination.innerHTML = html;
+    }
+    
+    // 更新分页信息
+    function updatePaginationInfo(data) {
+        const { page, per_page, count } = data;
+        const start = (page - 1) * per_page + 1;
+        const end = Math.min(page * per_page, count);
+        
+        document.getElementById('page-start').textContent = start;
+        document.getElementById('page-end').textContent = end;
+        document.getElementById('total-items').textContent = count;
+    }
+    
+    // 处理过滤表单提交
+    function handleFilterSubmit(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        currentFilters = {};
+        
+        // 收集过滤条件
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                currentFilters[key] = value;
+            }
+        }
+        
+        // 重新加载日志
+        loadLogs(1);
+    }
+    
+    // 重置过滤条件
+    function resetFilters() {
+        document.getElementById('filter-form').reset();
+        currentFilters = {};
+        loadLogs(1);
+    }
+    
+    // 处理全选复选框
+    function handleSelectAll(e) {
+        const isChecked = e.target.checked;
+        document.querySelectorAll('.log-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+            const logId = parseInt(checkbox.dataset.id);
+            
+            if (isChecked && !selectedLogIds.includes(logId)) {
+                selectedLogIds.push(logId);
+            } else if (!isChecked) {
+                selectedLogIds = selectedLogIds.filter(id => id !== logId);
+            }
+        });
+    }
+    
+    // 处理日志复选框变化
+    function handleLogCheckboxChange(e) {
+        const logId = parseInt(e.target.dataset.id);
+        
+        if (e.target.checked && !selectedLogIds.includes(logId)) {
+            selectedLogIds.push(logId);
+        } else if (!e.target.checked) {
+            selectedLogIds = selectedLogIds.filter(id => id !== logId);
+        }
+        
+        // 更新全选复选框状态
+        const allCheckboxes = document.querySelectorAll('.log-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.log-checkbox:checked');
+        document.getElementById('select-all-checkbox').checked = allCheckboxes.length === checkedCheckboxes.length;
+    }
+    
+    // 显示日志详情
+    async function showLogDetail(logId) {
+        try {
+            const response = await fetch(`/api/logs/${logId}`);
+            const log = await response.json();
+            
+            if (log) {
+                const content = document.getElementById('log-detail-content');
+                content.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">ID</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.id}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">级别</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${getLevelBadge(log.level)}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">类别</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${getCategoryBadge(log.category)}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">用户</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.user_username || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">操作</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.action}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">IP地址</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.ip_address || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">请求方法</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.method || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">状态码</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.status_code || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">请求路径</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${log.path || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">创建时间</h4>
+                            <p class="text-sm text-gray-900 dark:text-gray-100">${new Date(log.created).toLocaleString('zh-CN')}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">消息</h4>
+                        <p class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">${log.message}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">用户代理</h4>
+                        <p class="text-sm text-gray-900 dark:text-gray-100 break-all">${log.user_agent || '-'}</p>
+                    </div>
+                    ${log.extra_data && Object.keys(log.extra_data).length > 0 ? `
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">额外数据</h4>
+                        <pre class="text-sm text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-x-auto">${JSON.stringify(log.extra_data, null, 2)}</pre>
+                    </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('log-detail-modal').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('加载日志详情失败:', error);
+            showError('加载日志详情失败');
+        }
+    }
+    
+    // 关闭日志详情模态框
+    function closeLogDetailModal() {
+        document.getElementById('log-detail-modal').classList.add('hidden');
+    }
+    
+    // 删除日志
+    async function deleteLog(logId) {
+        if (!await showConfirm('确定要删除这条日志吗？')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/logs/${logId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showSuccess('日志已删除');
+                loadLogs(currentPage);
+                loadLogStats();
+            } else {
+                showError(data.message || '删除日志失败');
+            }
+        } catch (error) {
+            console.error('删除日志失败:', error);
+            showError('删除日志失败');
+        }
+    }
+    
+    // 批量删除日志
+    async function handleBatchDelete() {
+        if (selectedLogIds.length === 0) {
+            showError('请先选择要删除的日志');
+            return;
+        }
+        
+        if (!await showConfirm(`确定要删除选中的 ${selectedLogIds.length} 条日志吗？`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/logs/batch', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ log_ids: selectedLogIds }),
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showSuccess(data.message);
+                selectedLogIds = [];
+                loadLogs(currentPage);
+                loadLogStats();
+            } else {
+                showError(data.message || '批量删除日志失败');
+            }
+        } catch (error) {
+            console.error('批量删除日志失败:', error);
+            showError('批量删除日志失败');
+        }
+    }
+    
+    // 获取Cookie的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // 显示成功消息
+    function showSuccess(message) {
+        // 这里可以使用更友好的通知组件，如Toast或Alert
+        alert(message);
+    }
+    
+    // 显示错误消息
+    function showError(message) {
+        // 这里可以使用更友好的通知组件，如Toast或Alert
+        alert(message);
+    }
+    
+    // 显示确认对话框
+    function showConfirm(message) {
+        // 这里可以使用更友好的确认对话框组件
+        return confirm(message);
+    }
+</script>
+{% endblock %}

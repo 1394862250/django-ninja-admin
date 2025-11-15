@@ -153,13 +153,6 @@
     </div>
 </div>
 
-<!-- README介绍 -->
-<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">系统介绍</h3>
-    <div id="readme-content" class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
-        <p class="text-gray-500 dark:text-gray-400">加载中...</p>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -439,25 +432,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // 加载README
-    async function loadReadme() {
-        try {
-            const response = await fetch('/api/manage/readme', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
-            
-            const data = await response.json();
-            
-            if (data.success && data.data) {
-                document.getElementById('readme-content').innerHTML = data.data.html;
-            }
-        } catch (error) {
-            console.error('加载README失败:', error);
-            document.getElementById('readme-content').innerHTML = '<p class="text-red-500">加载失败</p>';
-        }
-    }
-    
     // 刷新数据按钮点击事件
     document.getElementById('refresh-btn').addEventListener('click', async function() {
         const btn = this;
@@ -471,8 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await Promise.all([
                 loadDashboard(),
                 loadCharts(),
-                loadSystemInfo(),
-                loadReadme()
+                loadSystemInfo()
             ]);
         } catch (error) {
             alert('刷新失败，请稍后重试');
@@ -494,7 +467,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDashboard();
     loadCharts();
     loadSystemInfo();
-    loadReadme();
     
     // 定时更新系统信息（每30秒）
     setInterval(loadSystemInfo, 30000);

@@ -11,6 +11,8 @@ from captcha.models import CaptchaStore
 from captcha.helpers import captcha_image_url
 from django.utils import timezone
 from datetime import datetime, timedelta
+from app.utils.log_utils import log_user_action
+from app.log.model import Log
 
 class UserAPI(BaseUserAPI):
     """用户相关API"""
@@ -117,18 +119,42 @@ class UserAPI(BaseUserAPI):
                     # 验证通过后删除验证码记录
                     captcha_store.delete()
                 except CaptchaStore.DoesNotExist:
+                    log_user_action(
+                        action="修改密码",
+                        message=f"用户 {user.username} 修改密码失败：验证码错误或已过期",
+                        level=Log.LEVEL.WARNING,
+                        user=user,
+                        request=request,
+                        extra_data={"reason": "验证码错误或已过期"}
+                    )
                     return error_response(
                         message="验证码错误或已过期",
                         status_code=400
                     )
             elif data.captcha or data.captcha_key:
                 # 如果只提供了其中一个，说明验证码不完整
+                log_user_action(
+                    action="修改密码",
+                    message=f"用户 {user.username} 修改密码失败：请提供完整的验证码信息",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request,
+                    extra_data={"reason": "验证码信息不完整"}
+                )
                 return error_response(
                     message="请提供完整的验证码信息",
                     status_code=400
                 )
             else:
                 # 如果没有提供验证码，返回错误
+                log_user_action(
+                    action="修改密码",
+                    message=f"用户 {user.username} 修改密码失败：未提供验证码",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request,
+                    extra_data={"reason": "未提供验证码"}
+                )
                 return error_response(
                     message="请提供验证码",
                     status_code=400
@@ -136,6 +162,14 @@ class UserAPI(BaseUserAPI):
             
             # 验证当前密码
             if not check_password(data.old_password, user.password):
+                log_user_action(
+                    action="修改密码",
+                    message=f"用户 {user.username} 修改密码失败：当前密码不正确",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request,
+                    extra_data={"reason": "当前密码不正确"}
+                )
                 return error_response(
                     message="当前密码不正确",
                     status_code=400
@@ -158,11 +192,28 @@ class UserAPI(BaseUserAPI):
             except Exception:
                 pass  # 活动记录失败不影响主流程
             
+            # 记录密码修改成功日志
+            log_user_action(
+                action="修改密码",
+                message=f"用户 {user.username} 修改密码成功",
+                user=user,
+                request=request
+            )
+            
             return success_response(
                 message="密码修改成功，请重新登录"
             )
             
         except Exception as exc:
+            # 记录密码修改异常日志
+            log_user_action(
+                action="修改密码",
+                message=f"用户 {request.user.username} 修改密码异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"error": str(exc)}
+            )
             return error_response(
                 message=f"密码修改失败: {str(exc)}",
                 status_code=500

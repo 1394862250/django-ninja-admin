@@ -24,5 +24,6 @@ urlpatterns = [
     path('manage/api-docs/', views.api_docs_view, name='api_docs'),
     path('manage/notifications/', views.notification_management_view, name='notification_management'),
     path('manage/notifications/create/', views.notification_create_view, name='notification_create'),
+    path('manage/logs/', views.log_management_view, name='log_management'),
 ]
 

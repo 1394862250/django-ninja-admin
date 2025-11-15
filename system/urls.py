@@ -23,6 +23,7 @@ from ninja import NinjaAPI
 # 导入User微服务API
 from app.user.api import create_user_api_router
 from app.notification.api import api as notification_api
+from app.log.api import router as log_api
 
 # 创建主API实例
 api = NinjaAPI(
@@ -37,6 +38,7 @@ api = NinjaAPI(
 user_api = create_user_api_router()
 api.add_router("", user_api)  # 移除了"/api/"前缀
 api.add_router("", notification_api)
+api.add_router("", log_api)
 
 urlpatterns = [
     # Web应用路由

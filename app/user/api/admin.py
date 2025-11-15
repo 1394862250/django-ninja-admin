@@ -18,6 +18,8 @@ import os
 import time
 import markdown
 import re
+from app.utils.log_utils import log_admin_action, log_user_action
+from app.log.model import Log
 
 class AdminAPI(BaseUserAPI):
     """管理相关API"""
@@ -406,6 +408,14 @@ class AdminAPI(BaseUserAPI):
             
             # 检查用户名是否已存在
             if User.objects.filter(username=data.username).exists():
+                log_admin_action(
+                    action="创建用户",
+                    message=f"管理员 {request.user.username} 尝试创建用户失败：用户名已存在",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"username": data.username, "reason": "用户名已存在"}
+                )
                 return error_response(
                     message="用户名已存在",
                     status_code=400
@@ -413,6 +423,14 @@ class AdminAPI(BaseUserAPI):
             
             # 检查邮箱是否已存在
             if User.objects.filter(email=data.email).exists():
+                log_admin_action(
+                    action="创建用户",
+                    message=f"管理员 {request.user.username} 尝试创建用户失败：邮箱已被注册",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"username": data.username, "email": data.email, "reason": "邮箱已被注册"}
+                )
                 return error_response(
                     message="邮箱已被注册",
                     status_code=400
@@ -437,6 +455,20 @@ class AdminAPI(BaseUserAPI):
                     profile.nickname = data.nickname
                     profile.save()
             
+            # 记录创建用户成功日志
+            log_admin_action(
+                action="创建用户",
+                message=f"管理员 {request.user.username} 创建了用户：{user.username}",
+                user=request.user,
+                request=request,
+                extra_data={
+                    "created_user_id": user.id,
+                    "created_username": user.username,
+                    "created_email": user.email,
+                    "is_staff": user.is_staff
+                }
+            )
+            
             return success_response(
                 data={
                     'id': user.id,
@@ -454,6 +486,15 @@ class AdminAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录创建用户异常日志
+            log_admin_action(
+                action="创建用户",
+                message=f"管理员 {request.user.username} 创建用户异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"username": data.username, "error": str(exc)}
+            )
             return error_response(
                 message=f"用户创建失败: {str(exc)}",
                 status_code=400
@@ -471,6 +512,14 @@ class AdminAPI(BaseUserAPI):
             try:
                 target_user = User.objects.get(id=user_id)
             except User.DoesNotExist:
+                log_admin_action(
+                    action="更新用户",
+                    message=f"管理员 {request.user.username} 尝试更新用户失败：用户不存在",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "reason": "用户不存在"}
+                )
                 return error_response(
                     message="用户不存在",
                     status_code=404
@@ -480,6 +529,14 @@ class AdminAPI(BaseUserAPI):
             if data.email:
                 email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
                 if not re.match(email_pattern, data.email):
+                    log_admin_action(
+                        action="更新用户",
+                        message=f"管理员 {request.user.username} 尝试更新用户失败：邮箱格式不正确",
+                        level=Log.LEVEL.WARNING,
+                        user=request.user,
+                        request=request,
+                        extra_data={"target_user_id": user_id, "email": data.email, "reason": "邮箱格式不正确"}
+                    )
                     return error_response(
                         message="邮箱格式不正确",
                         status_code=400
@@ -487,6 +544,14 @@ class AdminAPI(BaseUserAPI):
             
             # 检查用户名是否已存在（排除当前用户）
             if data.username and User.objects.filter(username=data.username).exclude(id=user_id).exists():
+                log_admin_action(
+                    action="更新用户",
+                    message=f"管理员 {request.user.username} 尝试更新用户失败：用户名已存在",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "username": data.username, "reason": "用户名已存在"}
+                )
                 return error_response(
                     message="用户名已存在",
                     status_code=400
@@ -494,6 +559,14 @@ class AdminAPI(BaseUserAPI):
             
             # 检查邮箱是否已存在（排除当前用户）
             if data.email and User.objects.filter(email=data.email).exclude(id=user_id).exists():
+                log_admin_action(
+                    action="更新用户",
+                    message=f"管理员 {request.user.username} 尝试更新用户失败：邮箱已被注册",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "email": data.email, "reason": "邮箱已被注册"}
+                )
                 return error_response(
                     message="邮箱已被注册",
                     status_code=400
@@ -525,6 +598,25 @@ class AdminAPI(BaseUserAPI):
                         profile.nickname = None  # 触发自动生成
                     profile.save()
             
+            # 记录更新用户成功日志
+            log_admin_action(
+                action="更新用户",
+                message=f"管理员 {request.user.username} 更新了用户信息：{target_user.username}",
+                user=request.user,
+                request=request,
+                extra_data={
+                    "target_user_id": target_user.id,
+                    "target_username": target_user.username,
+                    "updated_fields": {
+                        "username": data.username is not None,
+                        "email": data.email is not None,
+                        "is_active": data.is_active is not None,
+                        "is_staff": data.is_staff is not None,
+                        "password": data.password is not None
+                    }
+                }
+            )
+            
             return success_response(
                 data={
                     'id': target_user.id,
@@ -541,6 +633,15 @@ class AdminAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录更新用户异常日志
+            log_admin_action(
+                action="更新用户",
+                message=f"管理员 {request.user.username} 更新用户异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"target_user_id": user_id, "error": str(exc)}
+            )
             return error_response(
                 message=f"用户信息更新失败: {str(exc)}",
                 status_code=500
@@ -558,6 +659,14 @@ class AdminAPI(BaseUserAPI):
             try:
                 target_user = User.objects.get(id=user_id)
             except User.DoesNotExist:
+                log_admin_action(
+                    action="删除用户",
+                    message=f"管理员 {request.user.username} 尝试删除用户失败：用户不存在",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "reason": "用户不存在"}
+                )
                 return error_response(
                     message="用户不存在",
                     status_code=404
@@ -565,6 +674,14 @@ class AdminAPI(BaseUserAPI):
             
             # 防止删除自己
             if target_user.id == request.user.id:
+                log_admin_action(
+                    action="删除用户",
+                    message=f"管理员 {request.user.username} 尝试删除自己失败：不允许删除自己",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "reason": "不允许删除自己"}
+                )
                 return error_response(
                     message="不能删除自己的账户",
                     status_code=400
@@ -574,11 +691,32 @@ class AdminAPI(BaseUserAPI):
             username = target_user.username
             target_user.delete()
             
+            # 记录删除用户成功日志
+            log_admin_action(
+                action="删除用户",
+                message=f"管理员 {request.user.username} 删除了用户：{username}",
+                user=request.user,
+                request=request,
+                extra_data={
+                    "deleted_user_id": target_user.id,
+                    "deleted_username": username
+                }
+            )
+            
             return success_response(
                 message=f"用户 {username} 删除成功"
             )
             
         except Exception as exc:
+            # 记录删除用户异常日志
+            log_admin_action(
+                action="删除用户",
+                message=f"管理员 {request.user.username} 删除用户异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"target_user_id": user_id, "error": str(exc)}
+            )
             return error_response(
                 message=f"用户删除失败: {str(exc)}",
                 status_code=500
@@ -596,6 +734,14 @@ class AdminAPI(BaseUserAPI):
             try:
                 target_user = User.objects.get(id=user_id)
             except User.DoesNotExist:
+                log_admin_action(
+                    action="切换用户状态",
+                    message=f"管理员 {request.user.username} 尝试切换用户状态失败：用户不存在",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "reason": "用户不存在"}
+                )
                 return error_response(
                     message="用户不存在",
                     status_code=404
@@ -603,6 +749,14 @@ class AdminAPI(BaseUserAPI):
             
             # 防止修改自己的状态
             if target_user.id == request.user.id:
+                log_admin_action(
+                    action="切换用户状态",
+                    message=f"管理员 {request.user.username} 尝试切换自己状态失败：不允许修改自己的状态",
+                    level=Log.LEVEL.WARNING,
+                    user=request.user,
+                    request=request,
+                    extra_data={"target_user_id": user_id, "reason": "不允许修改自己的状态"}
+                )
                 return error_response(
                     message="不能修改自己的状态",
                     status_code=400
@@ -614,12 +768,34 @@ class AdminAPI(BaseUserAPI):
             
             status_text = "启用" if target_user.is_active else "禁用"
             
+            # 记录切换用户状态成功日志
+            log_admin_action(
+                action="切换用户状态",
+                message=f"管理员 {request.user.username} {status_text}了用户：{target_user.username}",
+                user=request.user,
+                request=request,
+                extra_data={
+                    "target_user_id": target_user.id,
+                    "target_username": target_user.username,
+                    "new_status": target_user.is_active
+                }
+            )
+            
             return success_response(
                 data={'is_active': target_user.is_active},
                 message=f"用户 {target_user.username} 状态已{status_text}"
             )
             
         except Exception as exc:
+            # 记录切换用户状态异常日志
+            log_admin_action(
+                action="切换用户状态",
+                message=f"管理员 {request.user.username} 切换用户状态异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"target_user_id": user_id, "error": str(exc)}
+            )
             return error_response(
                 message=f"修改用户状态失败: {str(exc)}",
                 status_code=500

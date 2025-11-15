@@ -8,6 +8,8 @@ from app.user.schemas import UserLoginSchema, UserRegisterSchema
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.hashers import check_password
 from app.user.model import UserActivity
+from app.utils.log_utils import log_auth_action
+from app.log.model import Log
 from datetime import datetime
 
 class AuthAPI(BaseUserAPI):
@@ -34,6 +36,15 @@ class AuthAPI(BaseUserAPI):
             
             if user is not None:
                 if not user.is_active:
+                    # 记录登录失败日志
+                    log_auth_action(
+                        action="用户登录",
+                        message=f"用户 {data.username} 登录失败：账户已被禁用",
+                        level=Log.LEVEL.WARNING,
+                        user=user,
+                        request=request,
+                        extra_data={"username": data.username, "reason": "账户已禁用"}
+                    )
                     return error_response(
                         message="用户账户已被禁用",
                         status_code=403
@@ -61,6 +72,15 @@ class AuthAPI(BaseUserAPI):
                 except Exception:
                     pass  # 如果记录失败，继续执行
                 
+                # 记录登录成功日志
+                log_auth_action(
+                    action="用户登录",
+                    message=f"用户 {user.username} 登录成功",
+                    user=user,
+                    request=request,
+                    extra_data={"username": data.username}
+                )
+                
                 return success_response(
                     data={
                         'user_id': user.id,
@@ -82,12 +102,28 @@ class AuthAPI(BaseUserAPI):
                     message="登录成功"
                 )
             else:
+                # 记录登录失败日志
+                log_auth_action(
+                    action="用户登录",
+                    message=f"用户 {data.username} 登录失败：用户名或密码错误",
+                    level=Log.LEVEL.WARNING,
+                    request=request,
+                    extra_data={"username": data.username, "reason": "用户名或密码错误"}
+                )
                 return error_response(
                     message="用户名或密码错误",
                     status_code=400
                 )
                 
         except Exception as exc:
+            # 记录登录异常日志
+            log_auth_action(
+                action="用户登录",
+                message=f"用户 {data.username} 登录异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                request=request,
+                extra_data={"username": data.username, "error": str(exc)}
+            )
             return error_response(
                 message=f"登录失败: {str(exc)}",
                 status_code=500
@@ -100,6 +136,14 @@ class AuthAPI(BaseUserAPI):
             
             # 检查用户名是否已存在
             if User.objects.filter(username=data.username).exists():
+                # 记录注册失败日志
+                log_auth_action(
+                    action="用户注册",
+                    message=f"用户 {data.username} 注册失败：用户名已存在",
+                    level=Log.LEVEL.WARNING,
+                    request=request,
+                    extra_data={"username": data.username, "email": data.email, "reason": "用户名已存在"}
+                )
                 return error_response(
                     message="用户名已存在",
                     status_code=400
@@ -107,6 +151,14 @@ class AuthAPI(BaseUserAPI):
             
             # 检查邮箱是否已存在
             if User.objects.filter(email=data.email).exists():
+                # 记录注册失败日志
+                log_auth_action(
+                    action="用户注册",
+                    message=f"用户 {data.username} 注册失败：邮箱已被注册",
+                    level=Log.LEVEL.WARNING,
+                    request=request,
+                    extra_data={"username": data.username, "email": data.email, "reason": "邮箱已被注册"}
+                )
                 return error_response(
                     message="邮箱已被注册",
                     status_code=400
@@ -145,6 +197,15 @@ class AuthAPI(BaseUserAPI):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
+            # 记录注册成功日志
+            log_auth_action(
+                action="用户注册",
+                message=f"用户 {user.username} 注册成功",
+                user=user,
+                request=request,
+                extra_data={"username": user.username, "email": user.email}
+            )
+            
             return success_response(
                 data={
                     'user_id': user.id,
@@ -161,6 +222,14 @@ class AuthAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录注册异常日志
+            log_auth_action(
+                action="用户注册",
+                message=f"用户 {data.username} 注册异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                request=request,
+                extra_data={"username": data.username, "email": data.email, "error": str(exc)}
+            )
             return error_response(
                 message=f"注册失败: {str(exc)}",
                 status_code=400
@@ -171,6 +240,13 @@ class AuthAPI(BaseUserAPI):
         try:
             # 检查用户是否已登录
             if not request.user.is_authenticated:
+                # 记录登出失败日志
+                log_auth_action(
+                    action="用户登出",
+                    message="用户登出失败：用户未登录",
+                    level=Log.LEVEL.WARNING,
+                    request=request
+                )
                 return error_response(
                     message="用户未登录",
                     status_code=401
@@ -188,6 +264,14 @@ class AuthAPI(BaseUserAPI):
             except Exception:
                 pass  # 如果记录失败，继续执行登出
             
+            # 记录登出成功日志
+            log_auth_action(
+                action="用户登出",
+                message=f"用户 {request.user.username} 登出成功",
+                user=request.user,
+                request=request
+            )
+            
             # 登出（安全处理session）
             try:
                 if hasattr(request, 'session'):
@@ -200,6 +284,14 @@ class AuthAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录登出异常日志
+            log_auth_action(
+                action="用户登出",
+                message=f"用户登出异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                request=request,
+                extra_data={"error": str(exc)}
+            )
             return error_response(
                 message=f"登出失败: {str(exc)}",
                 status_code=500

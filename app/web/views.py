@@ -151,6 +151,19 @@ def notification_create_view(request):
     }
     return render_template(request, 'manage/notification_create.html', context)
 
+
+@staff_member_required
+def log_management_view(request):
+    """
+    日志管理页面视图
+    显示系统日志列表和管理功能
+    """
+    context = {
+        'page_title': '日志管理',
+        'active_menu': 'logs',  # 设置活动菜单
+    }
+    return render_template(request, 'manage/log_management.html', context)
+
 # ===== 通用视图函数 =====
 
 def index_view(request):

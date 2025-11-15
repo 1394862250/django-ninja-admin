@@ -15,6 +15,8 @@ from app.notification.schema import (
     NotificationFilterSchema,
     NotificationMarkReadBulkSchema,
 )
+from app.utils.log_utils import log_notification_action, log_admin_action
+from app.log.model import Log
 
 User = get_user_model()
 
@@ -186,6 +188,13 @@ def create_notification(request, payload: NotificationCreateSchema):
     if not user.is_authenticated:
         return error_response("需要登录访问", status_code=401)
     if not (user.is_staff or user.is_superuser):
+        log_notification_action(
+            action="创建通知",
+            message=f"用户 {user.username} 尝试创建通知失败：权限不足",
+            level=Log.LEVEL.WARNING,
+            user=user,
+            request=request
+        )
         return error_response("需要管理员权限", status_code=403)
 
     if payload.priority not in Notification.PRIORITY:
@@ -239,6 +248,21 @@ def create_notification(request, payload: NotificationCreateSchema):
         )
         notifications.append(notification)
 
+    # 记录创建通知日志
+    log_notification_action(
+        action="创建通知",
+        message=f"用户 {user.username} 创建了 {len(notifications)} 条通知：{payload.title}",
+        user=user,
+        request=request,
+        extra_data={
+            "title": payload.title,
+            "category": payload.category,
+            "priority": payload.priority,
+            "recipient_role": payload.recipient_role,
+            "recipient_count": len(notifications)
+        }
+    )
+
     # 返回创建的通知列表
     data = [serialize_notification(n) for n in notifications]
     return success_response(
@@ -282,6 +306,13 @@ def send_notification(request, notification_id: int):
     if not user.is_authenticated:
         return error_response("需要登录访问", status_code=401)
     if not (user.is_staff or user.is_superuser):
+        log_notification_action(
+            action="发送通知",
+            message=f"用户 {user.username} 尝试发送通知失败：权限不足",
+            level=Log.LEVEL.WARNING,
+            user=user,
+            request=request
+        )
         return error_response("需要管理员权限", status_code=403)
 
     try:
@@ -300,6 +331,20 @@ def send_notification(request, notification_id: int):
     notification.status = Notification.STATUS.sent
     notification.save(update_fields=['status'])
 
+    # 记录发送通知日志
+    log_notification_action(
+        action="发送通知",
+        message=f"用户 {user.username} 发送了通知：{notification.title}",
+        user=user,
+        request=request,
+        extra_data={
+            "notification_id": notification.id,
+            "title": notification.title,
+            "recipient": notification.recipient.username if notification.recipient else None,
+            "recipient_role": notification.sent_role
+        }
+    )
+
     data = serialize_notification(notification)
     return success_response(data, message="通知已发送")
 
@@ -311,12 +356,33 @@ def delete_notification_admin(request, notification_id: int):
     if not user.is_authenticated:
         return error_response("需要登录访问", status_code=401)
     if not (user.is_staff or user.is_superuser):
+        log_notification_action(
+            action="删除通知",
+            message=f"用户 {user.username} 尝试删除通知失败：权限不足",
+            level=Log.LEVEL.WARNING,
+            user=user,
+            request=request
+        )
         return error_response("需要管理员权限", status_code=403)
 
     try:
         notification = Notification.objects.get(id=notification_id)
     except Notification.DoesNotExist:
         return error_response("通知不存在", status_code=404)
+
+    # 记录删除通知日志
+    log_notification_action(
+        action="删除通知",
+        message=f"用户 {user.username} 删除了通知：{notification.title}",
+        user=user,
+        request=request,
+        extra_data={
+            "notification_id": notification.id,
+            "title": notification.title,
+            "recipient": notification.recipient.username if notification.recipient else None,
+            "status": notification.status
+        }
+    )
 
     notification.delete()
     return success_response(message="通知已删除")

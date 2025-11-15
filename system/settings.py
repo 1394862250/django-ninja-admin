@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'app.user',  # User微服务应用
     'app.web',   # Web视图应用
     'app.notification',  # Notification微服务应用
+    'app.log',  # Log日志应用
 ]
 
 MIDDLEWARE = [
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Allauth 中间件
+    'app.middleware.log_middleware.LogMiddleware',  # 日志记录中间件
 ]
 
 ROOT_URLCONF = 'system.urls'

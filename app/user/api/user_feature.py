@@ -9,6 +9,8 @@ from app.user.model import UserActivity
 from django.core.paginator import Paginator
 from django.db.models import Q
 from datetime import datetime
+from app.utils.log_utils import log_user_action
+from app.log.model import Log
 
 class UserFeatureAPI(BaseUserAPI):
     """用户新增功能API"""
@@ -38,6 +40,13 @@ class UserFeatureAPI(BaseUserAPI):
             profile = user.profile if hasattr(user, 'profile') else None
             
             if not profile:
+                log_user_action(
+                    action="上传头像",
+                    message=f"用户 {user.username} 上传头像失败：用户资料不存在",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request
+                )
                 return error_response(
                     message="用户资料不存在",
                     status_code=404
@@ -45,6 +54,13 @@ class UserFeatureAPI(BaseUserAPI):
             
             # 获取上传的文件
             if not hasattr(request, 'FILES') or 'file' not in request.FILES:
+                log_user_action(
+                    action="上传头像",
+                    message=f"用户 {user.username} 上传头像失败：未提供文件",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request
+                )
                 return error_response(
                     message="未提供文件",
                     status_code=400
@@ -54,6 +70,14 @@ class UserFeatureAPI(BaseUserAPI):
             
             # 验证文件类型
             if not file.content_type.startswith('image/'):
+                log_user_action(
+                    action="上传头像",
+                    message=f"用户 {user.username} 上传头像失败：只能上传图片文件",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request,
+                    extra_data={"file_type": file.content_type}
+                )
                 return error_response(
                     message="只能上传图片文件",
                     status_code=400
@@ -61,6 +85,14 @@ class UserFeatureAPI(BaseUserAPI):
             
             # 验证文件大小 (5MB限制)
             if file.size > 5 * 1024 * 1024:
+                log_user_action(
+                    action="上传头像",
+                    message=f"用户 {user.username} 上传头像失败：文件大小超过5MB",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request,
+                    extra_data={"file_size": file.size}
+                )
                 return error_response(
                     message="文件大小不能超过5MB",
                     status_code=400
@@ -86,6 +118,18 @@ class UserFeatureAPI(BaseUserAPI):
             except Exception:
                 pass  # 活动记录失败不影响主流程
             
+            # 记录上传头像成功日志
+            log_user_action(
+                action="上传头像",
+                message=f"用户 {user.username} 上传头像成功",
+                user=user,
+                request=request,
+                extra_data={
+                    "file_size": file.size,
+                    "file_type": file.content_type
+                }
+            )
+            
             return success_response(
                 data={
                     'avatar_url': profile.avatar.url if profile.avatar else None,
@@ -94,6 +138,15 @@ class UserFeatureAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录上传头像异常日志
+            log_user_action(
+                action="上传头像",
+                message=f"用户 {request.user.username} 上传头像异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"error": str(exc)}
+            )
             return error_response(
                 message=f"头像上传失败: {str(exc)}",
                 status_code=500
@@ -157,6 +210,13 @@ class UserFeatureAPI(BaseUserAPI):
             profile = user.profile if hasattr(user, 'profile') else None
             
             if not profile:
+                log_user_action(
+                    action="更新个人资料",
+                    message=f"用户 {user.username} 更新个人资料失败：用户资料不存在",
+                    level=Log.LEVEL.WARNING,
+                    user=user,
+                    request=request
+                )
                 return error_response(
                     message="用户资料不存在",
                     status_code=404
@@ -175,6 +235,14 @@ class UserFeatureAPI(BaseUserAPI):
                         nickname=nickname_value.strip()
                     ).exclude(pk=profile.pk).first()
                     if existing_profile:
+                        log_user_action(
+                            action="更新个人资料",
+                            message=f"用户 {user.username} 更新个人资料失败：昵称已被其他用户使用",
+                            level=Log.LEVEL.WARNING,
+                            user=user,
+                            request=request,
+                            extra_data={"nickname": nickname_value.strip(), "reason": "昵称已被使用"}
+                        )
                         return error_response(
                                 message="昵称已被其他用户使用，请选择其他昵称",
                             status_code=400
@@ -204,6 +272,22 @@ class UserFeatureAPI(BaseUserAPI):
             except Exception:
                 pass  # 活动记录失败不影响主流程
             
+            # 记录更新个人资料成功日志
+            log_user_action(
+                action="更新个人资料",
+                message=f"用户 {user.username} 更新个人资料成功",
+                user=user,
+                request=request,
+                extra_data={
+                    "updated_fields": {
+                        "phone": data.phone is not None,
+                        "nickname": data.nickname is not None,
+                        "gender": data.gender is not None,
+                        "birth_date": data.birth_date is not None
+                    }
+                }
+            )
+            
             return success_response(
                 data={
                     'phone': profile.phone,
@@ -215,6 +299,15 @@ class UserFeatureAPI(BaseUserAPI):
             )
             
         except Exception as exc:
+            # 记录更新个人资料异常日志
+            log_user_action(
+                action="更新个人资料",
+                message=f"用户 {request.user.username} 更新个人资料异常：{str(exc)}",
+                level=Log.LEVEL.ERROR,
+                user=request.user,
+                request=request,
+                extra_data={"error": str(exc)}
+            )
             return error_response(
                 message=f"个人资料更新失败: {str(exc)}",
                 status_code=500
