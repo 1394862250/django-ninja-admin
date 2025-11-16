@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from ninja import NinjaAPI
 
 # 导入User微服务API
-from app.user.api import create_user_api_router
+from app.user.api import create_user_api_router, create_captcha_api_router, create_auth_api_router, create_user_feature_api_router, create_admin_api_router, create_role_api_router
 from app.notification.api import api as notification_api
 from app.log.api import router as log_api
 
@@ -35,11 +35,17 @@ api = NinjaAPI(
 )
 
 # 注册User微服务API到根路径
-user_api = create_user_api_router()
-api.add_router("", user_api)  # 移除了"/api/"前缀
+api.add_router("", create_user_api_router())
+api.add_router("", create_captcha_api_router())
+api.add_router("", create_auth_api_router())
+api.add_router("", create_user_feature_api_router())
+api.add_router("", create_admin_api_router())
+api.add_router("", create_role_api_router())
+
 api.add_router("", notification_api)
 api.add_router("", log_api)
 
+# 注册角色API到独立路径
 urlpatterns = [
     # Web应用路由
     path('', include('app.web.urls')),

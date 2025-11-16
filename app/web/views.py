@@ -2,10 +2,18 @@
 Web应用视图 - 用于映射HTML模板
 提供传统的Django视图功能，支持HTML页面渲染
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.db.models import Q
+from app.user.model import Permission, Role
+from app.utils.validators import permission_required
+
+User = get_user_model()
 
 
 def render_template(request, template_path: str, context: dict = None):
@@ -163,6 +171,59 @@ def log_management_view(request):
         'active_menu': 'logs',  # 设置活动菜单
     }
     return render_template(request, 'manage/log_management.html', context)
+
+
+@login_required
+@permission_required('role.view')
+def role_management(request):
+    """角色管理页面"""
+    # 获取所有角色
+    roles = Role.objects.prefetch_related('permissions').all()
+    
+    # 获取所有权限并按范围分组
+    permissions = Permission.objects.filter(is_active=True).order_by('scope', 'permission_type', 'name')
+    permissions_by_scope = {}
+    for perm in permissions:
+        if perm.scope not in permissions_by_scope:
+            permissions_by_scope[perm.scope] = []
+        permissions_by_scope[perm.scope].append(perm)
+    
+    # 获取所有权限类型
+    permission_types = Permission.PERMISSION_TYPES
+    
+    # 准备角色数据，包括权限信息
+    roles_data = []
+    for role in roles:
+        role_permissions = []
+        for perm in role.permissions.all():
+            role_permissions.append({
+                'id': perm.id,
+                'name': perm.name,
+                'code': perm.code,
+                'permission_type': perm.permission_type,
+                'scope': perm.scope,
+                'is_active': perm.is_active,
+            })
+        
+        roles_data.append({
+            'id': role.id,
+            'name': role.name,
+            'code': role.code,
+            'description': role.description,
+            'is_active': role.is_active,
+            'is_system': role.is_system,
+            'created': role.created.strftime('%Y-%m-%d %H:%M:%S') if role.created else '',
+            'modified': role.modified.strftime('%Y-%m-%d %H:%M:%S') if role.modified else '',
+            'permissions': role_permissions,
+        })
+    
+    context = {
+        'roles': roles_data,
+        'permissions_by_scope': permissions_by_scope,
+        'permission_types': [choice[0] for choice in permission_types]
+    }
+    
+    return render(request, 'manage/role_management.html', context)
 
 # ===== 通用视图函数 =====
 

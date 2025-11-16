@@ -258,3 +258,184 @@ class CaptchaVerifySchema(BaseModel):
         if not v or not v.strip():
             raise ValueError('验证码键不能为空')
         return v.strip()
+
+# ==================
+# 角色和权限相关Schema
+# ==================
+
+class PermissionSchema(BaseModel):
+    """权限Schema"""
+    id: int
+    name: str
+    code: str
+    description: str = None
+    permission_type: str
+    scope: str
+    is_active: bool
+    
+    class Config:
+        from_attributes = True
+
+
+class RoleSchema(BaseModel):
+    """角色Schema"""
+    id: int
+    name: str
+    code: str
+    description: str = None
+    is_active: bool
+    is_system: bool
+    permissions: List[PermissionSchema] = []
+    
+    class Config:
+        from_attributes = True
+
+
+class RoleCreateSchema(BaseModel):
+    """创建角色Schema"""
+    name: str
+    code: str
+    description: str = None
+    permission_codes: List[str] = []
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('角色名称不能为空')
+        if len(v) > 100:
+            raise ValueError('角色名称不能超过100个字符')
+        return v.strip()
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v or not v.strip():
+            raise ValueError('角色代码不能为空')
+        if len(v) > 100:
+            raise ValueError('角色代码不能超过100个字符')
+        # 只允许字母、数字和下划线
+        import re
+        if not re.match(r'^[a-zA-Z0-9_]+$', v):
+            raise ValueError('角色代码只能包含字母、数字和下划线')
+        return v.strip()
+
+
+class RoleUpdateSchema(BaseModel):
+    """更新角色Schema"""
+    name: str = None
+    description: str = None
+    is_active: bool = None
+    permission_codes: List[str] = None
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if v is not None:
+            if not v or not v.strip():
+                raise ValueError('角色名称不能为空')
+            if len(v) > 100:
+                raise ValueError('角色名称不能超过100个字符')
+            return v.strip()
+        return v
+
+
+class UserRoleSchema(BaseModel):
+    """用户角色Schema"""
+    id: int
+    user_id: int
+    username: str
+    role_id: int
+    role_name: str
+    role_code: str
+    is_active: bool
+    assigned_by: str = None
+    assigned_at: str
+    expires_at: str = None
+    
+    class Config:
+        from_attributes = True
+
+
+class UserRoleCreateSchema(BaseModel):
+    """创建用户角色Schema"""
+    user_id: int
+    role_code: str
+    expires_at: str = None
+    
+    @validator('user_id')
+    def validate_user_id(cls, v):
+        if v <= 0:
+            raise ValueError('用户ID必须大于0')
+        return v
+    
+    @validator('role_code')
+    def validate_role_code(cls, v):
+        if not v or not v.strip():
+            raise ValueError('角色代码不能为空')
+        return v.strip()
+
+
+class UserRoleUpdateSchema(BaseModel):
+    """更新用户角色Schema"""
+    is_active: bool = None
+    expires_at: str = None
+
+
+class PermissionCreateSchema(BaseModel):
+    """创建权限Schema"""
+    name: str
+    code: str
+    description: str = None
+    permission_type: str
+    scope: str
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('权限名称不能为空')
+        if len(v) > 100:
+            raise ValueError('权限名称不能超过100个字符')
+        return v.strip()
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v or not v.strip():
+            raise ValueError('权限代码不能为空')
+        if len(v) > 100:
+            raise ValueError('权限代码不能超过100个字符')
+        # 只允许字母、数字、下划线和点
+        import re
+        if not re.match(r'^[a-zA-Z0-9_.]+$', v):
+            raise ValueError('权限代码只能包含字母、数字、下划线和点')
+        return v.strip()
+    
+    @validator('permission_type')
+    def validate_permission_type(cls, v):
+        from app.user.model import Permission
+        valid_types = [choice[0] for choice in Permission.PERMISSION_TYPES]
+        if v not in valid_types:
+            raise ValueError(f'权限类型必须是以下之一: {", ".join(valid_types)}')
+        return v
+    
+    @validator('scope')
+    def validate_scope(cls, v):
+        from app.user.model import Permission
+        valid_scopes = [choice[0] for choice in Permission.PERMISSION_SCOPES]
+        if v not in valid_scopes:
+            raise ValueError(f'权限范围必须是以下之一: {", ".join(valid_scopes)}')
+        return v
+
+
+class PermissionUpdateSchema(BaseModel):
+    """更新权限Schema"""
+    name: str = None
+    description: str = None
+    is_active: bool = None
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if v is not None:
+            if not v or not v.strip():
+                raise ValueError('权限名称不能为空')
+            if len(v) > 100:
+                raise ValueError('权限名称不能超过100个字符')
+            return v.strip()
+        return v
