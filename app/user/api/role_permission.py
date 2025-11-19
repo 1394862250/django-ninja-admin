@@ -7,7 +7,7 @@ from app.user.schemas import (
     RoleCreateSchema, RoleUpdateSchema, UserRoleCreateSchema, UserRoleUpdateSchema,
     PermissionCreateSchema, PermissionUpdateSchema
 )
-from app.user.model import Permission, Role, UserRole
+from app.user.models import Permission, Role, UserRole
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone

@@ -26,5 +26,6 @@ urlpatterns = [
     path('manage/notifications/', views.notification_management_view, name='notification_management'),
     path('manage/notifications/create/', views.notification_create_view, name='notification_create'),
     path('manage/logs/', views.log_management_view, name='log_management'),
+    path('manage/settings/', views.setting_management_view, name='setting_management'),
 ]
 

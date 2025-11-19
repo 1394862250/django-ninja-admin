@@ -7,7 +7,7 @@ from .base import BaseUserAPI, success_response, error_response
 from app.user.schemas import UserLoginSchema, UserRegisterSchema
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.hashers import check_password
-from app.user.model import UserActivity
+from app.user.models import UserActivity
 from app.utils.log_utils import log_auth_action
 from app.log.model import Log
 from datetime import datetime

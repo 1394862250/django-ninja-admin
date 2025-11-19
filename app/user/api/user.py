@@ -13,6 +13,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from app.utils.log_utils import log_user_action
 from app.log.model import Log
+from app.user.models import UserActivity
 
 class UserAPI(BaseUserAPI):
     """用户相关API"""
@@ -181,7 +182,6 @@ class UserAPI(BaseUserAPI):
             
             # 记录密码修改活动
             try:
-                from app.user.model import UserActivity
                 UserActivity.objects.create(
                     user=user,
                     activity_type='password_change',

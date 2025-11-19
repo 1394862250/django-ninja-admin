@@ -10,7 +10,8 @@ from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q
-from app.user.model import Permission, Role
+from app.user.models import Permission, Role
+from app.setting.utils import SettingManager
 from app.utils.validators import permission_required
 
 User = get_user_model()
@@ -34,6 +35,7 @@ def render_template(request, template_path: str, context: dict = None):
     # 添加默认上下文
     context.setdefault('user', request.user)
     context.setdefault('is_authenticated', request.user.is_authenticated)
+    context.setdefault('site_name', SettingManager.get('system.site_name', 'Django Ninja 管理平台'))
     
     return render(request, template_path, context)
 
@@ -179,7 +181,7 @@ def role_management(request):
     """角色管理页面"""
     # 获取所有角色
     roles = Role.objects.prefetch_related('permissions').all()
-    
+
     # 获取所有权限并按范围分组
     permissions = Permission.objects.filter(is_active=True).order_by('scope', 'permission_type', 'name')
     permissions_by_scope = {}
@@ -187,10 +189,10 @@ def role_management(request):
         if perm.scope not in permissions_by_scope:
             permissions_by_scope[perm.scope] = []
         permissions_by_scope[perm.scope].append(perm)
-    
+
     # 获取所有权限类型
     permission_types = Permission.PERMISSION_TYPES
-    
+
     # 准备角色数据，包括权限信息
     roles_data = []
     for role in roles:
@@ -204,7 +206,7 @@ def role_management(request):
                 'scope': perm.scope,
                 'is_active': perm.is_active,
             })
-        
+
         roles_data.append({
             'id': role.id,
             'name': role.name,
@@ -216,14 +218,25 @@ def role_management(request):
             'modified': role.modified.strftime('%Y-%m-%d %H:%M:%S') if role.modified else '',
             'permissions': role_permissions,
         })
-    
+
     context = {
         'roles': roles_data,
         'permissions_by_scope': permissions_by_scope,
         'permission_types': [choice[0] for choice in permission_types]
     }
-    
-    return render(request, 'manage/role_management.html', context)
+
+    return render_template(request, 'manage/role_management.html', context)
+
+
+@staff_member_required
+@permission_required('setting.view')
+def setting_management_view(request):
+    """设置管理页面视图"""
+    context = {
+        'page_title': '系统设置',
+        'active_menu': 'settings',
+    }
+    return render_template(request, 'manage/setting_management.html', context)
 
 # ===== 通用视图函数 =====
 
@@ -238,4 +251,3 @@ def index_view(request):
             return redirect('web:user_home')
     else:
         return redirect('web:login')
-

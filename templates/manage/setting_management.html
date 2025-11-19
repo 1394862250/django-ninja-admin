@@ -1,0 +1,533 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}系统设置 - {{ block.super }}{% endblock %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block admin_content %}
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">系统设置列表</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            修改任意值后将自动保存；可通过表格右侧删除自定义项。所有数据来自 <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-900 rounded">SystemSetting</code>。
+        </p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3">
+        <button id="refresh-settings-btn" class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none">
+            <i class="fas fa-rotate-right mr-2"></i>重新加载
+        </button>
+        <button id="open-create-setting-btn" type="button"
+                class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-400 dark:text-gray-900 focus:outline-none">
+            <i class="fas fa-plus mr-2"></i>创建字段
+        </button>
+    </div>
+</div>
+
+<div id="settings-alert" class="hidden mb-4 px-4 py-2 rounded text-sm font-medium"></div>
+
+<div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold w-20">ID</th>
+                    <th class="px-4 py-3 text-left font-semibold w-72">名称 / 键名</th>
+                    <th class="px-4 py-3 text-left font-semibold">当前值</th>
+                    <th class="px-4 py-3 text-left font-semibold w-80">描述</th>
+                    <th class="px-4 py-3 text-left font-semibold w-32">操作</th>
+                </tr>
+            </thead>
+            <tbody id="settings-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>正在加载设置...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div id="settings-pagination-info" class="text-xs text-gray-500 dark:text-gray-400">
+            数据尚未加载
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="prev-page-btn" class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none disabled:opacity-40">
+                上一页
+            </button>
+            <button id="next-page-btn" class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none disabled:opacity-40">
+                下一页
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 创建字段模态框 -->
+<div id="create-setting-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-3xl rounded shadow-xl border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">创建新字段</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">填写以下信息以添加新的系统设置项</p>
+            </div>
+            <button id="close-create-setting-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="create-setting-form" class="px-6 py-5 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">字段名称 *</label>
+                    <input type="text" name="name" required maxlength="100"
+                           class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">键名 *</label>
+                    <input type="text" name="key" required maxlength="100" placeholder="如：system.site_name"
+                           class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">分类 *</label>
+                    <select name="category" required
+                            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                        <option value="system">系统配置</option>
+                        <option value="feature">功能开关</option>
+                        <option value="ui">界面配置</option>
+                        <option value="email">邮件配置</option>
+                        <option value="security">安全配置</option>
+                        <option value="notification">通知配置</option>
+                        <option value="api">API配置</option>
+                        <option value="business">业务配置</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">值类型 *</label>
+                    <select name="value_type" required
+                            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                        <option value="string">字符串</option>
+                        <option value="text">长文本</option>
+                        <option value="boolean">布尔值</option>
+                        <option value="integer">整数</option>
+                        <option value="float">浮点数</option>
+                        <option value="json">JSON</option>
+                        <option value="url">URL</option>
+                        <option value="email">邮箱</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">排序</label>
+                    <input type="number" name="sort_order" value="0"
+                           class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">默认值</label>
+                    <input type="text" name="default_value"
+                           class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">当前值</label>
+                    <input type="text" name="value"
+                           class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述</label>
+                <textarea name="description" rows="3"
+                          class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none resize-y"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" id="cancel-create-setting-btn"
+                        class="px-4 py-2 text-sm font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none">
+                    取消
+                </button>
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 text-sm font-semibold rounded bg-orange-500 text-white hover:bg-orange-600 focus:outline-none disabled:opacity-60">
+                    <i class="fas fa-save mr-2"></i>保存字段
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tableBody = document.getElementById('settings-table-body');
+    const messageEl = document.getElementById('settings-alert');
+    const paginationInfo = document.getElementById('settings-pagination-info');
+    const refreshBtn = document.getElementById('refresh-settings-btn');
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+    const createBtn = document.getElementById('open-create-setting-btn');
+    const createModal = document.getElementById('create-setting-modal');
+    const createForm = document.getElementById('create-setting-form');
+    const closeCreateBtn = document.getElementById('close-create-setting-btn');
+    const cancelCreateBtn = document.getElementById('cancel-create-setting-btn');
+
+    const state = {
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+    };
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showMessage(type, text) {
+        if (!messageEl) return;
+        const classes = {
+            success: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300 border border-green-200 dark:border-green-500/30',
+            error: 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300 border border-red-200 dark:border-red-500/30',
+            info: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30',
+        };
+        messageEl.className = `px-4 py-2 rounded text-sm font-medium ${classes[type] || classes.info}`;
+        messageEl.textContent = text;
+        messageEl.classList.remove('hidden');
+    }
+
+    function hideMessage() {
+        if (messageEl) {
+            messageEl.classList.add('hidden');
+        }
+    }
+
+    function renderValueField(setting) {
+        const value = setting.value ?? '';
+        const disabledAttr = setting.is_editable ? '' : 'disabled';
+        if (setting.value_type === 'boolean') {
+            const boolVal = String(value).toLowerCase() === 'true';
+            return `
+                <select class="w-full px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none"
+                        data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+                    <option value="true" ${boolVal ? 'selected' : ''}>True</option>
+                    <option value="false" ${!boolVal ? 'selected' : ''}>False</option>
+                </select>
+            `;
+        }
+        if (setting.value_type === 'text') {
+            return `
+                <textarea rows="3" class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none resize-y"
+                          data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>${escapeHtml(value)}</textarea>
+            `;
+        }
+        return `
+            <input type="text" class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none"
+                   value="${escapeHtml(value)}" data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+        `;
+    }
+
+    function renderSettings(settings) {
+        if (!settings || settings.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">暂无设置项</td>
+                </tr>
+            `;
+            return;
+        }
+
+        const startIndex = (state.page - 1) * state.pageSize;
+
+        const rows = settings.map((setting, index) => `
+            <tr data-key="${setting.key}">
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">${startIndex + index + 1}</td>
+                <td class="px-4 py-3">
+                    <div class="font-semibold text-gray-900 dark:text-gray-100">${escapeHtml(setting.name)}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${escapeHtml(setting.key)}</div>
+                    <span class="inline-flex mt-1 px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-900/60 text-gray-600 dark:text-gray-300">
+                        ${escapeHtml(setting.category || 'system')} · ${escapeHtml(setting.value_type || 'string')}
+                    </span>
+                </td>
+                <td class="px-4 py-3 align-top">${renderValueField(setting)}</td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-300 align-top">
+                    ${setting.description ? escapeHtml(setting.description) : '<span class="text-gray-400">暂无描述</span>'}
+                </td>
+                <td class="px-4 py-3 align-top">
+                    <button data-action="delete-setting" data-key="${setting.key}"
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded border border-red-200 text-red-600 dark:border-red-500/40 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none disabled:opacity-60"
+                            ${setting.is_editable ? '' : 'disabled'}>
+                        <i class="fas fa-trash mr-1.5"></i>删除
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        tableBody.innerHTML = rows;
+    }
+
+    function updatePagination(pagination) {
+        if (!pagination) {
+            paginationInfo.textContent = '无分页信息';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            return;
+        }
+
+        state.totalPages = pagination.total_pages || 1;
+        state.page = pagination.page || 1;
+
+        paginationInfo.textContent = `第 ${state.page} / ${state.totalPages} 页，共 ${pagination.total} 条`;
+        prevBtn.disabled = !pagination.has_previous;
+        nextBtn.disabled = !pagination.has_next;
+    }
+
+    async function loadSettings(page = 1) {
+        state.page = page;
+        hideMessage();
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>加载中...
+                </td>
+            </tr>
+        `;
+        try {
+            const params = new URLSearchParams({
+                page: String(page),
+                page_size: String(state.pageSize),
+                active_only: 'true',
+            });
+            const response = await fetch(`/api/settings?${params.toString()}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': 'Bearer session',
+                },
+            });
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                renderSettings(data.data.settings || []);
+                updatePagination(data.data.pagination || {});
+                showMessage('success', '设置已加载');
+            } else {
+                throw new Error(data.message || '加载失败');
+            }
+        } catch (error) {
+            console.error('加载设置失败:', error);
+            showMessage('error', error.message || '加载失败，请稍后重试');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-4 py-6 text-center text-red-500">加载失败</td>
+                </tr>
+            `;
+        }
+    }
+
+    async function saveSettingValue(key, value) {
+        const response = await fetch(`/api/setting/${encodeURIComponent(key)}/value`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer session',
+                'X-CSRFToken': getCookie('csrftoken') || '',
+            },
+            body: JSON.stringify({
+                value: value,
+                validate: true,
+                do_validate: true,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || '保存失败');
+        }
+        return response.json();
+    }
+
+    async function deleteSetting(key) {
+        const response = await fetch(`/api/setting/${encodeURIComponent(key)}`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: {
+                'Authorization': 'Bearer session',
+                'X-CSRFToken': getCookie('csrftoken') || '',
+            },
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || '删除失败');
+        }
+        return response.json();
+    }
+
+    async function handleAutoSave(input) {
+        if (!input || input.disabled) return;
+        const row = input.closest('tr');
+        if (!row) return;
+        const key = row.dataset.key;
+        const value = input.value ?? '';
+
+        input.dataset.saving = 'true';
+        input.classList.add('opacity-60');
+        try {
+            await saveSettingValue(key, value);
+            showMessage('success', `设置 ${key} 已保存`);
+        } catch (error) {
+            console.error('自动保存失败:', error);
+            showMessage('error', error.message || '自动保存失败');
+        } finally {
+            delete input.dataset.saving;
+            input.classList.remove('opacity-60');
+        }
+    }
+
+    tableBody.addEventListener('change', function (event) {
+        const input = event.target.closest('[data-value-input="true"]');
+        if (!input) return;
+        handleAutoSave(input);
+    });
+
+    tableBody.addEventListener('blur', function (event) {
+        const input = event.target.closest('[data-value-input="true"]');
+        if (!input) return;
+        if (input.dataset.saving === 'true') return;
+        handleAutoSave(input);
+    }, true);
+
+    tableBody.addEventListener('click', async function (event) {
+        const button = event.target.closest('[data-action="delete-setting"]');
+        if (!button) return;
+        const key = button.dataset.key;
+        if (!key) return;
+        const confirmed = await showConfirm(`确认删除设置 ${key} 吗？`, {
+            title: '删除确认',
+            confirmText: '删除',
+            cancelText: '取消'
+        });
+        if (!confirmed) return;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>删除中';
+        try {
+            await deleteSetting(key);
+            showMessage('success', `设置 ${key} 已删除`);
+            loadSettings(state.page);
+        } catch (error) {
+            console.error('删除设置失败:', error);
+            showMessage('error', error.message || '删除失败');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-trash mr-1.5"></i>删除';
+        }
+    });
+
+    refreshBtn.addEventListener('click', function () {
+        loadSettings(state.page);
+    });
+
+    prevBtn.addEventListener('click', function () {
+        if (state.page > 1) {
+            loadSettings(state.page - 1);
+        }
+    });
+
+    nextBtn.addEventListener('click', function () {
+        if (state.page < state.totalPages) {
+            loadSettings(state.page + 1);
+        }
+    });
+
+    function toggleCreateModal(show) {
+        if (!createModal) return;
+        if (show) {
+            if (createForm) {
+                createForm.reset();
+            }
+            createModal.classList.remove('hidden');
+        } else {
+            createModal.classList.add('hidden');
+        }
+    }
+
+    if (createBtn) {
+        createBtn.addEventListener('click', () => toggleCreateModal(true));
+    }
+    if (closeCreateBtn) {
+        closeCreateBtn.addEventListener('click', () => toggleCreateModal(false));
+    }
+    if (cancelCreateBtn) {
+        cancelCreateBtn.addEventListener('click', () => toggleCreateModal(false));
+    }
+
+    async function createSetting(payload) {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer session',
+                'X-CSRFToken': getCookie('csrftoken') || '',
+            },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || '创建失败');
+        }
+        return response.json();
+    }
+
+    if (createForm) {
+        createForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const formData = new FormData(createForm);
+            const payload = {
+                name: formData.get('name'),
+                key: formData.get('key'),
+                category: formData.get('category'),
+                value_type: formData.get('value_type'),
+                value: formData.get('value') || null,
+                default_value: formData.get('default_value') || null,
+                description: formData.get('description') || null,
+                sort_order: Number(formData.get('sort_order') || 0),
+            };
+            try {
+                await createSetting(payload);
+                showMessage('success', '创建成功');
+                toggleCreateModal(false);
+                loadSettings(1);
+            } catch (error) {
+                console.error('创建设置失败:', error);
+                showMessage('error', error.message || '创建失败');
+            }
+        });
+    }
+
+    loadSettings(1);
+});
+</script>
+{% endblock %}
+
+    

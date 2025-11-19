@@ -582,3 +582,23 @@ class UserRole(TimeStampedModel):
         """检查角色是否有效（激活且未过期）"""
         return self.is_active and not self.is_expired()
 
+    def init_data(self):
+        """初始化数据"""
+        try:
+            Role.objects.create(
+                name='管理员',
+                code='super_admin',
+                description='系统管理员，拥有大部分管理权限',
+                is_active=True,
+                is_system=True
+            )
+            Role.objects.create(
+                name='用户',
+                code='user',
+                description='普通用户，拥有基本权限',
+                is_active=True,
+                is_system=False
+            )
+            return True
+        except Exception as e:
+            return False

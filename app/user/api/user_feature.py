@@ -5,7 +5,7 @@
 
 from .base import BaseUserAPI, success_response, error_response
 from app.user.schemas import UserProfileUpdateSchema
-from app.user.model import UserActivity
+from app.user.models import UserActivity,UserProfile
 from django.core.paginator import Paginator
 from django.db.models import Q
 from datetime import datetime
@@ -230,7 +230,6 @@ class UserFeatureAPI(BaseUserAPI):
                 nickname_value = data.nickname
                 if nickname_value and nickname_value.strip():
                     # 检查昵称唯一性（排除当前用户）
-                    from app.user.model import UserProfile
                     existing_profile = UserProfile.objects.filter(
                         nickname=nickname_value.strip()
                     ).exclude(pk=profile.pk).first()

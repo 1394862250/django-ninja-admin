@@ -5,7 +5,7 @@
 
 from .base import BaseUserAPI, success_response, error_response
 from app.user.schemas import AdminCreateUserSchema, UserUpdateSchema
-from app.user.model import UserActivity, UserProfile
+from app.user.models import UserActivity, UserProfile
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator

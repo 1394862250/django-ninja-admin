@@ -52,10 +52,11 @@ INSTALLED_APPS = [
     'captcha',  # Django Simple Captcha - 验证码
     
     # 自定义应用
-    'app.user',  # User微服务应用
+    'app.user.UserConfig',  # User微服务应用
     'app.web',   # Web视图应用
     'app.notification',  # Notification微服务应用
     'app.log',  # Log日志应用
+    'app.setting',  # 设置管理应用
 ]
 
 MIDDLEWARE = [

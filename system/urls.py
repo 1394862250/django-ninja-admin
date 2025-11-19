@@ -24,6 +24,7 @@ from ninja import NinjaAPI
 from app.user.api import create_user_api_router, create_captcha_api_router, create_auth_api_router, create_user_feature_api_router, create_admin_api_router, create_role_api_router
 from app.notification.api import api as notification_api
 from app.log.api import router as log_api
+from app.setting.api import router as setting_api
 
 # 创建主API实例
 api = NinjaAPI(
@@ -44,6 +45,7 @@ api.add_router("", create_role_api_router())
 
 api.add_router("", notification_api)
 api.add_router("", log_api)
+api.add_router("", setting_api)
 
 # 注册角色API到独立路径
 urlpatterns = [

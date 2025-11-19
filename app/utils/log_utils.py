@@ -130,6 +130,16 @@ def create_log(
             method = method or request.method
             user = user or (request.user if hasattr(request, 'user') and request.user.is_authenticated else None)
         
+        # 确保 user_agent 不为 None（管理命令等场景）
+        if user_agent is None:
+            user_agent = ''
+        
+        # 确保其他字段也不为 None
+        if path is None:
+            path = ''
+        if method is None:
+            method = ''
+        
         # 创建日志记录
         Log.objects.create(
             user=user,

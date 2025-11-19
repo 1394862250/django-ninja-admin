@@ -31,7 +31,7 @@ from functools import wraps
 from django.http import JsonResponse
 from ninja.errors import HttpError
 from django.http import HttpRequest
-from app.user.model import UserProfile
+from app.user.models import UserProfile
 
 
 def validate_username(username):

@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from captcha.fields import CaptchaField
 from captcha.models import CaptchaStore
+from app.user.models import Permission
 
 
 class UserLoginSchema(BaseModel):
@@ -409,7 +410,6 @@ class PermissionCreateSchema(BaseModel):
     
     @validator('permission_type')
     def validate_permission_type(cls, v):
-        from app.user.model import Permission
         valid_types = [choice[0] for choice in Permission.PERMISSION_TYPES]
         if v not in valid_types:
             raise ValueError(f'权限类型必须是以下之一: {", ".join(valid_types)}')
@@ -417,7 +417,6 @@ class PermissionCreateSchema(BaseModel):
     
     @validator('scope')
     def validate_scope(cls, v):
-        from app.user.model import Permission
         valid_scopes = [choice[0] for choice in Permission.PERMISSION_SCOPES]
         if v not in valid_scopes:
             raise ValueError(f'权限范围必须是以下之一: {", ".join(valid_scopes)}')

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}管理后台 - 系统管理平台{% endblock %}</title>
+    <title>{% block title %}管理后台 - {{ site_name|default:"系统管理平台" }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -62,13 +62,19 @@
                         通知管理
                     </a>
 
-                    <a href="{% url 'web:log_management' %}" 
+                    <a href="{% url 'web:log_management' %}"
                        class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'logs' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
                         <i class="fas fa-file-alt w-5 h-5 mr-3 {% if active_menu == 'logs' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
                         日志管理
                     </a>
 
-                    <a href="{% url 'web:api_docs' %}" 
+                    <a href="{% url 'web:setting_management' %}"
+                       class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'settings' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                        <i class="fas fa-cogs w-5 h-5 mr-3 {% if active_menu == 'settings' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
+                        系统设置
+                    </a>
+
+                    <a href="{% url 'web:api_docs' %}"
                        class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'api_docs' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
                         <i class="fas fa-book w-5 h-5 mr-3 {% if active_menu == 'api_docs' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
                         API文档
@@ -80,9 +86,12 @@
 
     <!-- 通知模态框组件 -->
     {% include "components/notification_modal.html" %}
-    
+
     <!-- 统一提示框组件 -->
     {% include "components/alert_components.html" %}
+
+    <!-- 自定义模态框占位符 -->
+    {% block modal %}{% endblock %}
 
     <!-- 主内容区 -->
         <div class="flex-1 ml-64">
