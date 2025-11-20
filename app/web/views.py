@@ -50,7 +50,10 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('web:user_home')
     
-    return render_template(request, 'auth/login.html')
+    context = {
+        'auth_background': SettingManager.get('ui.auth_background', ''),
+    }
+    return render_template(request, 'auth/login.html', context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -61,7 +64,10 @@ def register_view(request):
     if request.user.is_authenticated:
         return redirect('web:user_home')
     
-    return render_template(request, 'auth/register.html')
+    context = {
+        'auth_background': SettingManager.get('ui.auth_background', ''),
+    }
+    return render_template(request, 'auth/register.html', context)
 
 
 # ===== 用户相关视图 =====

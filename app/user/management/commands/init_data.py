@@ -74,6 +74,60 @@ class SettingDataInitializer:
                     'required': True
                 }
             },
+            {
+                'key': 'openai.api_url',
+                'name': 'OpenAI接口地址',
+                'value_type': 'url',
+                'category': 'api',
+                'value': 'https://api.openai.com/v1/chat/completions',
+                'default_value': 'https://api.openai.com/v1/chat/completions',
+                'description': 'OpenAI服务的基础URL',
+                'sort_order': 10,
+            },
+            {
+                'key': 'openai.api_key',
+                'name': 'OpenAI API密钥',
+                'value_type': 'string',
+                'category': 'api',
+                'value': '',
+                'default_value': '',
+                'description': '调用OpenAI接口使用的API Key',
+                'sort_order': 11,
+                'validation_rules': {
+                    'min_length': 10,
+                },
+                'extra_options': {
+                    'placeholder': 'sk-***'
+                }
+            },
+            {
+                'key': 'openai.model',
+                'name': 'OpenAI模型',
+                'value_type': 'string',
+                'category': 'api',
+                'value': 'gpt-4o-mini',
+                'default_value': 'gpt-4o-mini',
+                'description': '默认使用的OpenAI模型名称',
+                'sort_order': 12,
+                'extra_options': {
+                    'placeholder': '例如：gpt-4o-mini'
+                }
+            },
+            {
+                'key': 'ui.auth_background',
+                'name': '认证页背景图',
+                'value_type': 'string',
+                'category': 'ui',
+                'value': '',
+                'default_value': '',
+                'description': '登录/注册页面通用背景图地址（留空则使用默认背景）',
+                'sort_order': 20,
+                'extra_options': {
+                    'placeholder': '/media/backgrounds/auth.jpg',
+                    'allow_upload': True,
+                    'upload_hint': '支持图片文件，建议尺寸1920x1080，大小不超过5MB'
+                }
+            },
         ]
 
     def initialize(self):

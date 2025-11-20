@@ -178,6 +178,13 @@ document.addEventListener('DOMContentLoaded', function () {
         totalPages: 1,
     };
 
+    const uploadFileInput = document.createElement('input');
+    uploadFileInput.type = 'file';
+    uploadFileInput.accept = 'image/*';
+    uploadFileInput.classList.add('hidden');
+    document.body.appendChild(uploadFileInput);
+    let pendingUpload = { key: null, input: null };
+
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)
@@ -224,25 +231,49 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderValueField(setting) {
         const value = setting.value ?? '';
         const disabledAttr = setting.is_editable ? '' : 'disabled';
+        const allowUpload = Boolean(setting.extra_options && setting.extra_options.allow_upload);
+        let controlHtml = '';
+
         if (setting.value_type === 'boolean') {
             const boolVal = String(value).toLowerCase() === 'true';
-            return `
+            controlHtml = `
                 <select class="w-full px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none"
                         data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
                     <option value="true" ${boolVal ? 'selected' : ''}>True</option>
                     <option value="false" ${!boolVal ? 'selected' : ''}>False</option>
                 </select>
             `;
-        }
-        if (setting.value_type === 'text') {
-            return `
+        } else if (setting.value_type === 'text') {
+            controlHtml = `
                 <textarea rows="3" class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none resize-y"
                           data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>${escapeHtml(value)}</textarea>
             `;
+        } else {
+            controlHtml = `
+                <input type="text" class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none"
+                       value="${escapeHtml(value)}" data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+            `;
         }
+
+        if (!allowUpload || !setting.is_editable) {
+            return controlHtml;
+        }
+
+        const uploadHint = setting.extra_options && setting.extra_options.upload_hint
+            ? escapeHtml(setting.extra_options.upload_hint)
+            : '支持上传图片文件';
+
         return `
-            <input type="text" class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none"
-                   value="${escapeHtml(value)}" data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+            <div class="space-y-2">
+                ${controlHtml}
+                <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <button type="button" data-action="upload-setting" data-key="${escapeHtml(setting.key)}"
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none">
+                        <i class="fas fa-upload mr-1.5"></i>上传
+                    </button>
+                    <span>${uploadHint}</span>
+                </div>
+            </div>
         `;
     }
 
@@ -383,6 +414,27 @@ document.addEventListener('DOMContentLoaded', function () {
         return response.json();
     }
 
+    async function uploadSettingFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/settings/upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Authorization': 'Bearer session',
+                'X-CSRFToken': getCookie('csrftoken') || '',
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || '上传失败');
+        }
+        return response.json();
+    }
+
     async function handleAutoSave(input) {
         if (!input || input.disabled) return;
         const row = input.closest('tr');
@@ -417,7 +469,47 @@ document.addEventListener('DOMContentLoaded', function () {
         handleAutoSave(input);
     }, true);
 
+    uploadFileInput.addEventListener('change', async function (event) {
+        const file = event.target.files[0];
+        if (!file || !pendingUpload.input) {
+            pendingUpload = { key: null, input: null };
+            return;
+        }
+
+        const targetInput = pendingUpload.input;
+        try {
+            const data = await uploadSettingFile(file);
+            if (data.success && data.data && data.data.url) {
+                targetInput.value = data.data.url;
+                handleAutoSave(targetInput);
+                showMessage('success', data.message || '上传成功');
+            } else {
+                showMessage('error', (data && data.message) || '上传失败');
+            }
+        } catch (error) {
+            console.error('上传文件失败:', error);
+            showMessage('error', error.message || '上传失败，请稍后重试');
+        } finally {
+            uploadFileInput.value = '';
+            pendingUpload = { key: null, input: null };
+        }
+    });
+
     tableBody.addEventListener('click', async function (event) {
+        const uploadBtn = event.target.closest('[data-action="upload-setting"]');
+        if (uploadBtn) {
+            const row = uploadBtn.closest('tr');
+            if (!row) return;
+            const input = row.querySelector('[data-value-input="true"]');
+            if (!input || input.disabled) {
+                showMessage('error', '该设置不可编辑');
+                return;
+            }
+            pendingUpload = { key: uploadBtn.dataset.key, input };
+            uploadFileInput.click();
+            return;
+        }
+
         const button = event.target.closest('[data-action="delete-setting"]');
         if (!button) return;
         const key = button.dataset.key;

@@ -19,7 +19,11 @@
         }
     </script>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden py-8">
+<body class="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden py-8"
+      {% if auth_background %}
+      style="background-image: url('{{ auth_background }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+      {% endif %}>
+    {% if not auth_background %}
     <!-- 静态线条背景 -->
     <div class="absolute inset-0 z-0 opacity-30">
         <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -44,6 +48,7 @@
             </svg>
         </div>
     </div>
+    {% endif %}
 
     <div class="w-full max-w-md mx-auto p-8 bg-white rounded-xl shadow-xl relative z-10 border border-gray-100">
         <div class="text-center mb-8">

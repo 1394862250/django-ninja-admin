@@ -1,7 +1,12 @@
 """设置管理API"""
+import os
+from uuid import uuid4
 from typing import Dict, Any, Optional
 from django.shortcuts import get_object_or_404
-from ninja import Router, Query
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from ninja import Router, Query, File
+from ninja.files import UploadedFile
 from app.setting.models import SystemSetting
 from app.setting.schema import (
     SystemSettingCreate,
@@ -256,4 +261,33 @@ def reset_settings_to_defaults(request):
     return success_response(
         message=f'已重置 {reset_count} 项设置',
         data={'reset_count': reset_count}
+    )
+
+
+@router.post('/settings/upload', response=Dict[str, Any])
+def upload_setting_asset(request, file: UploadedFile = File(...)):
+    """上传设置相关资源文件"""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return error_response(message='暂无权限执行此操作', status_code=403)
+
+    if not file.content_type.startswith(('image/', 'video/', 'application/')):
+        return error_response(message='不支持的文件类型', status_code=400)
+
+    max_size = 5 * 1024 * 1024  # 5MB
+    if file.size > max_size:
+        return error_response(message='文件大小不能超过 5MB', status_code=400)
+
+    extension = os.path.splitext(file.name)[1] or ''
+    filename = f'settings/{uuid4().hex}{extension}'
+    saved_path = default_storage.save(filename, ContentFile(file.read()))
+    file_url = default_storage.url(saved_path)
+
+    return success_response(
+        message='上传成功',
+        data={
+            'url': file_url,
+            'path': saved_path,
+            'size': file.size,
+            'content_type': file.content_type,
+        }
     )
