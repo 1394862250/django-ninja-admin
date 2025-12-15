@@ -1,11 +1,11 @@
 """日志业务流程"""
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple, List
 
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 
-from ..actions.log_actions import get_logs_queryset_action, create_log_action
+from ..actions.log_actions import get_logs_queryset_action, create_log_action, delete_log_action
 from ..model import Log
 
 User = get_user_model()
@@ -117,7 +117,7 @@ def create_request_log_flow(
     category = get_log_category_flow(path)
     action = get_log_action_flow(method, path)
     message = f"{method} {path} - {status_code}"
-    
+
     try:
         create_log_action(
             level=level,
@@ -135,4 +135,117 @@ def create_request_log_flow(
     except Exception as e:
         # 记录日志失败不应该影响正常业务流程
         print(f"创建请求日志失败: {e}")
+
+
+def delete_log_flow(log_id: int) -> Tuple[bool, str]:
+    """删除单个日志流程"""
+    try:
+        log = Log.objects.get(id=log_id)
+        delete_log_action(log)
+        return True, ""
+    except Log.DoesNotExist:
+        return False, "日志不存在"
+    except Exception as e:
+        return False, f"删除失败: {str(e)}"
+
+
+def delete_logs_batch_flow(log_ids: List[int]) -> Tuple[int, str]:
+    """批量删除日志流程"""
+    if not log_ids:
+        return 0, "请选择要删除的日志"
+
+    try:
+        logs = Log.objects.filter(id__in=log_ids)
+        count = logs.count()
+        for log in logs:
+            delete_log_action(log)
+        return count, ""
+    except Exception as e:
+        return 0, f"批量删除失败: {str(e)}"
+
+
+def get_log_stats_flow() -> Dict[str, Any]:
+    """获取日志统计信息流程"""
+    from django.utils import timezone
+    from datetime import timedelta
+
+    level_stats = {level: Log.objects.filter(level=level).count() for level, _ in Log.LEVEL}
+    category_stats = {cat: Log.objects.filter(category=cat).count() for cat, _ in Log.CATEGORY}
+    recent_count = Log.objects.filter(created__gte=timezone.now() - timedelta(days=7)).count()
+    today_count = Log.objects.filter(created__date=timezone.now().date()).count()
+    total_count = Log.objects.count()
+
+    return {
+        "level_stats": level_stats,
+        "category_stats": category_stats,
+        "recent_count": recent_count,
+        "today_count": today_count,
+        "total_count": total_count,
+    }
+
+
+def list_logs_with_pagination_flow(
+    page: int,
+    per_page: int,
+    level: Optional[str] = None,
+    category: Optional[str] = None,
+    user_id: Optional[int] = None,
+    action: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    ip_address: Optional[str] = None,
+    path: Optional[str] = None,
+    method: Optional[str] = None,
+    status_code: Optional[int] = None,
+) -> Dict[str, Any]:
+    """获取分页日志列表流程"""
+    from django.core.paginator import Paginator
+
+    # 获取过滤后的查询集
+    queryset = filter_logs_flow(
+        level=level,
+        category=category,
+        user_id=user_id,
+        action=action,
+        start_date=start_date,
+        end_date=end_date,
+        ip_address=ip_address,
+        path=path,
+        method=method,
+        status_code=status_code,
+    )
+
+    # 分页
+    paginator = Paginator(queryset, per_page)
+    page_obj = paginator.get_page(page)
+
+    # 序列化
+    items = []
+    for log in page_obj:
+        items.append({
+            "id": log.id,
+            "level": log.level,
+            "category": log.category,
+            "message": log.message,
+            "user_id": log.user.id if log.user else None,
+            "username": log.user.username if log.user else None,
+            "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
+            "path": log.path,
+            "method": log.method,
+            "status_code": log.status_code,
+            "action": log.action,
+            "extra_data": log.extra_data,
+            "created": log.created.isoformat() if log.created else None,
+        })
+
+    return {
+        "items": items,
+        "count": paginator.count,
+        "page": page,
+        "per_page": per_page,
+        "pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    }
 

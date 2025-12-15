@@ -75,8 +75,6 @@ class NotificationFilterSchema(Schema):
     category: Optional[str] = Field(None, description="按类别过滤")
     status: Optional[str] = Field(None, description="按状态过滤")
     is_read: Optional[bool] = Field(None, description="按是否已读过滤")
-    page: int = Field(1, ge=1, description="当前页码")
-    page_size: int = Field(20, ge=1, le=100, description="每页数量")
 
 
 class NotificationCreateSchema(Schema):
@@ -108,8 +106,8 @@ class NotificationController(ModelControllerBase):
 
     def get_queryset(self):
         """默认查询集：调用 Flow 获取"""
-        user = self.request.user
-        return get_user_notifications_flow(user)
+        user = self.context.request.user if hasattr(self, 'context') and self.context.request.user.is_authenticated else None
+        return get_user_notifications_flow(user) if user else Notification.objects.none()
 
     def update(self, *args, **kwargs):
         """禁用直接更新"""
@@ -124,24 +122,30 @@ class NotificationController(ModelControllerBase):
     @route.get("/unread-count")
     def unread_count(self):
         """获取未读通知数量"""
-        user = self.request.user
+        user = self.context.request.user
+        if not user.is_authenticated:
+            return error_response("需要登录访问", status_code=401)
         count = get_unread_count_flow(user)
         return success_response({"count": count})
 
     @route.get("/unread")
     def unread_notifications(self, page: int = 1, page_size: int = 20):
         """获取未读通知列表"""
-        user = self.request.user
+        user = self.context.request.user
+        if not user.is_authenticated:
+            return error_response("需要登录访问", status_code=401)
         queryset = get_unread_notifications_flow(user)
 
         # 使用 ninja-extra 内置分页
         paginator = PageNumberPaginationExtra(page_size)
-        return paginator.paginate_queryset(queryset, self.request)
+        return paginator.paginate_queryset(queryset, self.context.request)
 
-    @route.post("/{notification_id}/mark-read")
+    @route.post("/mark-read/{notification_id}")
     def mark_notification_read(self, notification_id: int):
         """标记通知为已读 - Flow 内部处理权限和业务逻辑"""
-        user = self.request.user
+        user = self.context.request.user
+        if not user.is_authenticated:
+            return error_response("需要登录访问", status_code=401)
         success, error_msg, notification = mark_notification_read_flow(user, notification_id)
         if not success:
             return error_response(error_msg, status_code=404 if "不存在" in error_msg else 400)
@@ -150,7 +154,9 @@ class NotificationController(ModelControllerBase):
     @route.post("/mark-read-bulk")
     def mark_notifications_read_bulk(self, payload: NotificationMarkReadBulkSchema):
         """批量标记通知为已读 - Flow 内部处理权限和业务逻辑"""
-        user = self.request.user
+        user = self.context.request.user
+        if not user.is_authenticated:
+            return error_response("需要登录访问", status_code=401)
         updated, error_msg = mark_notifications_read_bulk_flow(user, payload.notification_ids)
         if error_msg:
             return error_response(error_msg, status_code=400)
@@ -159,17 +165,55 @@ class NotificationController(ModelControllerBase):
     # ==================== 管理员接口 ====================
 
     @route.get("/manage", permissions=[IsStaffOrSuperuser])
-    def list_all_notifications(self, filters: NotificationFilterSchema = Query(...)):
-        """管理员：获取所有通知列表（带过滤）"""
+    def list_all_notifications(
+        self,
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        category: Optional[str] = Query(None),
+        status: Optional[str] = Query(None),
+        is_read: Optional[bool] = Query(None)
+    ):
+        """管理员:获取所有通知列表（带过滤）"""
         queryset = filter_notifications_flow(
-            category=filters.category,
-            status=filters.status,
-            is_read=filters.is_read,
-        )
+            category=category,
+            status=status,
+            is_read=is_read,
+        ).select_related('recipient')
 
-        # 使用 ninja-extra 内置分页
-        paginator = PageNumberPaginationExtra(filters.page_size)
-        return paginator.paginate_queryset(queryset.select_related('recipient'), self.request)
+        # 手动分页
+        from django.core.paginator import Paginator
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+
+        # 序列化数据
+        items = []
+        for notification in page_obj:
+            items.append({
+                "id": notification.id,
+                "title": notification.title,
+                "body": notification.body,
+                "category": notification.category,
+                "priority": notification.priority,
+                "status": notification.status,
+                "is_read": notification.is_read,
+                "read_at": notification.read_at.isoformat() if notification.read_at else None,
+                "scheduled_for": notification.scheduled_for.isoformat() if notification.scheduled_for else None,
+                "sent_role": notification.sent_role,
+                "created": notification.created.isoformat() if notification.created else None,
+                "recipient_id": notification.recipient.id if notification.recipient else None,
+                "recipient_username": notification.recipient.username if notification.recipient else None,
+                "recipient_email": notification.recipient.email if notification.recipient else None,
+            })
+
+        return success_response({
+            "results": items,
+            "pagination": {
+                "count": paginator.count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": paginator.num_pages,
+            }
+        })
 
     @route.get("/manage/unread-count", permissions=[IsStaffOrSuperuser])
     def admin_unread_count(self):
@@ -186,7 +230,9 @@ class NotificationController(ModelControllerBase):
     @route.post("", response=Dict)
     def create(self, payload: NotificationCreateSchema):
         """创建通知 - Flow 内部处理权限判断"""
-        user = self.request.user
+        user = self.context.request.user
+        if not user.is_authenticated:
+            return error_response("需要登录访问", status_code=401)
         success, error_msg, notifications = create_notifications_flow(
             user=user,
             recipient_id=payload.recipient_id,
@@ -197,7 +243,7 @@ class NotificationController(ModelControllerBase):
             priority=payload.priority,
             status=payload.status,
             scheduled_for=payload.scheduled_for,
-            request=self.request,
+            request=self.context.request,
         )
         if not success:
             status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
@@ -213,8 +259,8 @@ class NotificationController(ModelControllerBase):
     @route.post("/manage/{notification_id}/send", permissions=[IsStaffOrSuperuser])
     def send_notification(self, notification_id: int):
         """发送通知 - Flow 内部处理权限判断"""
-        user = self.request.user
-        success, error_msg, notification = send_notification_flow(user, notification_id, self.request)
+        user = self.context.request.user
+        success, error_msg, notification = send_notification_flow(user, notification_id, self.context.request)
         if not success:
             status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
             return error_response(error_msg, status_code=status_code)
@@ -223,8 +269,8 @@ class NotificationController(ModelControllerBase):
     @route.delete("/manage/{notification_id}", permissions=[IsStaffOrSuperuser])
     def delete(self, notification_id: int):
         """删除通知 - Flow 内部处理权限判断"""
-        user = self.request.user
-        success, error_msg = delete_notification_flow(user, notification_id, self.request)
+        user = self.context.request.user
+        success, error_msg = delete_notification_flow(user, notification_id, self.context.request)
         if not success:
             status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
             return error_response(error_msg, status_code=status_code)

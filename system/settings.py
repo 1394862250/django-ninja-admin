@@ -28,6 +28,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# 禁用自动添加斜杠，避免与 Django Ninja API 路由冲突
+APPEND_SLASH = False
+
 
 # Application definition
 
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
     # 第三方应用
     'corsheaders',
     'ninja',  # Django Ninja
+    'ninja_extra',  # Django Ninja Extra
     
     # 认证和权限
     'allauth',  # Django Allauth

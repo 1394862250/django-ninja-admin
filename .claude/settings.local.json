@@ -8,7 +8,12 @@
       "Bash(mkdir:*)",
       "Bash(grep:*)",
       "Bash(python manage.py check:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python manage.py show_urls:*)",
+      "Bash(python:*)",
+      "Bash(curl -s -w \"\\nHTTP Status: %{http_code}\\n\" http://localhost:8000/api/logs/?page=1)",
+      "Bash(curl:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

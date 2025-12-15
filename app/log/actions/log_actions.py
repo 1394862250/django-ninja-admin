@@ -41,3 +41,8 @@ def create_log_action(
         extra_data=extra_data or {},
     )
 
+
+def delete_log_action(log: Log) -> None:
+    """删除日志记录"""
+    log.delete()
+

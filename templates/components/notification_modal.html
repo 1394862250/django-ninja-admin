@@ -37,7 +37,7 @@
     async function loadUnreadNotifications() {
         try {
             const isAdmin = {% if user.is_staff or user.is_superuser %}true{% else %}false{% endif %};
-            const apiUrl = isAdmin ? '/api/manage/notifications?is_read=false&page_size=10' : '/api/notifications/unread?page_size=10';
+            const apiUrl = isAdmin ? '/api/notifications/manage?is_read=false&page_size=10' : '/api/notifications/unread?page_size=10';
             
             const response = await fetch(apiUrl, {
                 method: 'GET',

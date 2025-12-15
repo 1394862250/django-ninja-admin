@@ -93,7 +93,7 @@ def list_users_flow(request, page: int = 1, page_size: int = 10, search: str = N
         )
 
     User = get_user_model()
-    queryset = User.objects.all().select_related('profile')
+    queryset = User.objects.all().select_related('profile').order_by('-date_joined')
 
     if search:
         from django.db.models import Q

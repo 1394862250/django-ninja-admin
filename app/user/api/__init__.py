@@ -19,6 +19,9 @@ def create_user_api_router():
     """创建用户API路由器（主路由，包含所有子路由）"""
     api = Router(tags=['用户API'])
     CaptchaAPI(api)
+    # 注册用户相关路由
+    user_router = create_user_api_router_new()
+    api.add_router("", user_router)
     return api
 
 def create_captcha_api_router():

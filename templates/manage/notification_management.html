@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentFilters.status) params.append('status', currentFilters.status);
             if (currentFilters.is_read !== '') params.append('is_read', currentFilters.is_read);
 
-            const response = await fetch(`/api/manage/notifications?${params.toString()}`, {
+            const response = await fetch(`/api/notifications/manage?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': 'Bearer session'
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`/api/manage/notifications/${notificationId}/send`, {
+            const response = await fetch(`/api/notifications/manage/${notificationId}/send`, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer session',
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`/api/manage/notifications/${notificationId}`, {
+            const response = await fetch(`/api/notifications/manage/${notificationId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': 'Bearer session',

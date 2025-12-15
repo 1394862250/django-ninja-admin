@@ -6,6 +6,7 @@ from ninja_extra import (
     api_controller,
     http_get,
     http_put,
+    http_delete,
     ControllerBase
 )
 from ninja_extra.permissions import IsAuthenticated
@@ -20,6 +21,7 @@ import markdown
 from .permissions import IsStaffOrSuperuser
 from .admin_schemas import UserUpdateSchema
 from app.user.models import UserActivity
+from app.user.flows.admin_flow import delete_user_flow
 from app.utils.responses import success_response, error_response
 
 
@@ -73,6 +75,16 @@ class AdminExtraController(ControllerBase):
         user.save()
 
         return success_response(message="用户信息已更新")
+
+    @http_delete("/users/{user_id}", url_name='admin_delete_user_extra')
+    def delete_user(self, request, user_id: int):
+        """删除用户 - 调用 Flow"""
+        result = delete_user_flow(request, user_id)
+
+        if not result.success:
+            return error_response(message=result.message, status_code=403)
+
+        return success_response(message=result.message)
 
     @http_get("/dashboard/charts", url_name='admin_dashboard_charts')
     def get_dashboard_charts(self, days: int = 30):

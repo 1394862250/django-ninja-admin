@@ -324,12 +324,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        state.totalPages = pagination.total_pages || 1;
+        state.totalPages = pagination.pages || 1;
         state.page = pagination.page || 1;
 
-        paginationInfo.textContent = `第 ${state.page} / ${state.totalPages} 页，共 ${pagination.total} 条`;
-        prevBtn.disabled = !pagination.has_previous;
-        nextBtn.disabled = !pagination.has_next;
+        paginationInfo.textContent = `第 ${state.page} / ${state.totalPages} 页，共 ${pagination.count} 条`;
+        prevBtn.disabled = state.page <= 1;
+        nextBtn.disabled = state.page >= state.totalPages;
     }
 
     async function loadSettings(page = 1) {
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 page_size: String(state.pageSize),
                 active_only: 'true',
             });
-            const response = await fetch(`/api/settings?${params.toString()}`, {
+            const response = await fetch(`/api/settings/list?${params.toString()}`, {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
@@ -358,8 +358,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
 
             if (data.success && data.data) {
-                renderSettings(data.data.settings || []);
-                updatePagination(data.data.pagination || {});
+                renderSettings(data.data.results || []);
+                updatePagination({
+                    count: data.data.count,
+                    page: data.data.page,
+                    page_size: data.data.page_size,
+                    pages: data.data.pages
+                });
                 showMessage('success', '设置已加载');
             } else {
                 throw new Error(data.message || '加载失败');
@@ -376,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function saveSettingValue(key, value) {
-        const response = await fetch(`/api/setting/${encodeURIComponent(key)}/value`, {
+        const response = await fetch(`/api/settings/value/${encodeURIComponent(key)}`, {
             method: 'PUT',
             credentials: 'same-origin',
             headers: {
@@ -385,6 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 'X-CSRFToken': getCookie('csrftoken') || '',
             },
             body: JSON.stringify({
+                key: key,
                 value: value,
                 validate: true,
                 do_validate: true,
@@ -399,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function deleteSetting(key) {
-        const response = await fetch(`/api/setting/${encodeURIComponent(key)}`, {
+        const response = await fetch(`/api/settings/by-key/${encodeURIComponent(key)}`, {
             method: 'DELETE',
             credentials: 'same-origin',
             headers: {
