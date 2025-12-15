@@ -234,6 +234,7 @@ class NotificationController(ModelControllerBase):
         stats = get_notification_stats_flow()
         return success_response(stats)
 
+    @route.post("", response=Dict)
     def create(self, payload: NotificationCreateSchema):
         """创建通知"""
         user = self.request.user

@@ -96,7 +96,8 @@ class SystemSettingOut(ModelSchema):
 
 class SystemSettingValueUpdate(Schema):
     """更新设置值Schema"""
-    value: str
+    key: str = Field(..., description="设置键名")
+    value: str = Field(..., description="设置值")
     validate: bool = Field(default=True, description="是否验证值")
 
 

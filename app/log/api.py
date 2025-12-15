@@ -56,7 +56,7 @@ class LogController(ModelControllerBase):
         """默认查询集：按创建时间倒序，预加载用户"""
         return Log.objects.select_related("user").order_by("-created")
 
-    @route.get("", response=List[LogOut])
+    @route.get("")
     def list_logs(
         self,
         filters: LogFilterSchema = Query(...),
