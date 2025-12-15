@@ -122,9 +122,13 @@ def get_settings_grouped_flow() -> List[Dict[str, Any]]:
         )
     return result
 
-def get_setting_by_key_flow(key: str) -> SystemSetting:
-    """根据键名获取设置对象流程"""
-    return get_setting_by_key_action(key)
+def get_setting_by_key_flow(key: str) -> Tuple[bool, Optional[str], Optional[SystemSetting]]:
+    """根据键名获取设置对象流程 - 包含异常处理"""
+    try:
+        setting = get_setting_by_key_action(key)
+        return True, None, setting
+    except SystemSetting.DoesNotExist:
+        return False, "设置不存在", None
 
 
 def get_setting_value_flow(key: str) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:

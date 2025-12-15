@@ -185,14 +185,13 @@ class SettingController(ModelControllerBase):
 
     @route.get("/by-key/{key}", response=SystemSettingOut)
     def get_setting(self, key: str):
-        """根据键名获取设置"""
+        """根据键名获取设置 - Flow 内部处理异常"""
         from .flows.setting_flows import get_setting_by_key_flow
-        try:
-            setting = get_setting_by_key_flow(key)
-            return setting
-        except SystemSetting.DoesNotExist:
+        success, error_msg, setting = get_setting_by_key_flow(key)
+        if not success:
             from django.http import Http404
-            raise Http404("设置不存在")
+            raise Http404(error_msg)
+        return setting
 
     @route.get("/value/{key}", response=SettingValueOut)
     def get_setting_value(self, key: str):
