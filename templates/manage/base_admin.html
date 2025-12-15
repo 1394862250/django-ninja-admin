@@ -69,12 +69,6 @@
                         用户管理
                     </a>
 
-                    <a href="{% url 'web:role_management' %}" 
-                       class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'roles' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
-                        <i class="fas fa-user-tag w-5 h-5 mr-3 {% if active_menu == 'roles' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
-                        角色管理
-                    </a>
-
                     <a href="{% url 'web:notification_management' %}" 
                        class="flex items-center px-3 py-2 text-sm font-medium {% if active_menu == 'notifications' %}text-orange-600 dark:text-gray-100 bg-orange-50 dark:bg-gray-700{% else %}text-gray-700 dark:text-gray-300{% endif %}">
                         <i class="fas fa-bell w-5 h-5 mr-3 {% if active_menu == 'notifications' %}text-orange-600 dark:text-gray-100{% else %}text-gray-500 dark:text-gray-500{% endif %}"></i>
