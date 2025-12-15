@@ -3,7 +3,11 @@
     "allow": [
       "Bash(uv sync:*)",
       "Bash(python manage.py makemigrations:*)",
-      "Bash(uv run python:*)"
+      "Bash(uv run python:*)",
+      "Bash(tree:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(python manage.py check:*)"
     ],
     "deny": [],
     "ask": []

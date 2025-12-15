@@ -18,22 +18,27 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from ninja import NinjaAPI
+from ninja_extra import NinjaExtraAPI
 
 # 导入User微服务API
 from app.user.api import create_user_api_router, create_captcha_api_router, create_auth_api_router, create_user_feature_api_router, create_admin_api_router, create_role_api_router
-from app.notification.api import api as notification_api
-from app.log.api import router as log_api
-from app.setting.api import router as setting_api
+from app.notification.api import NotificationController
+from app.setting.api import SettingController
+from app.log.api import LogController
 
 # 创建主API实例
-api = NinjaAPI(
+api = NinjaExtraAPI(
     title="Django Ninja Admin API",
     description="Django Ninja管理后台API - 微服务架构 + 工具集成 + 验证码",
     version="1.0.0",
     docs_url="/docs/",  # 显式指定文档URL（Swagger UI）
     openapi_url="/openapi.json",  # 显式指定OpenAPI Schema URL
 )
+
+# 注册日志控制器（自动CRUD + 统计）
+api.register_controllers(LogController)
+api.register_controllers(NotificationController)
+api.register_controllers(SettingController)
 
 # 注册User微服务API到根路径
 api.add_router("", create_user_api_router())
@@ -43,9 +48,6 @@ api.add_router("", create_user_feature_api_router())
 api.add_router("", create_admin_api_router())
 api.add_router("", create_role_api_router())
 
-api.add_router("", notification_api)
-api.add_router("", log_api)
-api.add_router("", setting_api)
 
 # 注册角色API到独立路径
 urlpatterns = [

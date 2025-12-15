@@ -4,7 +4,7 @@
 """
 
 from .base import BaseUserAPI, success_response, error_response
-from app.user.schemas import CaptchaVerifySchema
+from .captcha_schemas import CaptchaVerifySchema
 from captcha.models import CaptchaStore
 from captcha.helpers import captcha_image_url
 

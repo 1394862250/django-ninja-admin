@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'allauth',  # Django Allauth
     'allauth.account',  # 账户管理
     'allauth.socialaccount',  # 社交登录
-    'guardian',  # Django Guardian - 对象级权限
     'model_utils',  # Django Model Utils - 模型工具
     'captcha',  # Django Simple Captcha - 验证码
     

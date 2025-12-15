@@ -21,7 +21,7 @@ urlpatterns = [
     # 管理相关页面
     path('manage/dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path('manage/users/', views.user_management_view, name='user_management'),
-    path('manage/roles/', views.role_management, name='role_management'),
+    # path('manage/roles/', views.role_management, name='role_management'),  # RBAC 已废弃
     path('manage/api-docs/', views.api_docs_view, name='api_docs'),
     path('manage/notifications/', views.notification_management_view, name='notification_management'),
     path('manage/notifications/create/', views.notification_create_view, name='notification_create'),

@@ -1,72 +1,46 @@
 """
 User API模块
-导出所有API类
+导出所有API路由创建函数
 """
 
+# 导入新的路由创建函数
+from .auth import create_auth_api_router
+from .user import create_user_api_router as create_user_api_router_new
+from .user_feature import create_user_feature_api_router as create_user_feature_api_router_new
+from .admin import create_admin_api_router as create_admin_api_router_new
+
+# 暂时保留旧的 API 类导入
 from .base import BaseUserAPI, success_response, error_response
 from .captcha import CaptchaAPI
-from .auth import AuthAPI
-from .user import UserAPI
-from .user_feature import UserFeatureAPI
-from .admin import AdminAPI
-from .role_permission import RolePermissionAPI
 from ninja import Router
 
 
 def create_user_api_router():
-    """创建用户API路由器并注册所有模块"""
+    """创建用户API路由器（主路由，包含所有子路由）"""
     api = Router(tags=['用户API'])
-    
-    # 创建各个API模块实例
     CaptchaAPI(api)
-    AuthAPI(api)
-    UserAPI(api)
-    UserFeatureAPI(api)
-    AdminAPI(api)
-    
     return api
 
 def create_captcha_api_router():
     """创建验证码API路由器"""
     api = Router(tags=['验证码API'])
-    
-    # 创建验证码API模块实例
     CaptchaAPI(api)
-    
     return api
 
-def create_auth_api_router():
-    """创建认证API路由器"""
-    api = Router(tags=['认证API'])
-    
-    # 创建认证API模块实例
-    AuthAPI(api)
-    
-    return api
+# create_auth_api_router 已在 auth.py 中定义
+# create_user_api_router_new 已在 user.py 中定义
+# create_user_feature_api_router_new 已在 user_feature.py 中定义
+# create_admin_api_router_new 已在 admin.py 中定义
 
 def create_user_feature_api_router():
     """创建用户特征API路由器"""
-    api = Router(tags=['用户特征API'])
-    
-    # 创建用户特征API模块实例
-    UserFeatureAPI(api)
-    
-    return api
+    return create_user_feature_api_router_new()
 
 def create_admin_api_router():
     """创建管理API路由器"""
-    api = Router(tags=['用户管理API'])
-    
-    # 创建管理API模块实例
-    AdminAPI(api)
-    
-    return api
+    return create_admin_api_router_new()
 
 def create_role_api_router():
-    """创建角色API路由器"""
-    api = Router(tags=['角色API'])
-    
-    # 创建角色API模块实例
-    RolePermissionAPI(api)
-    
-    return api
+    """创建角色API路由器（已删除）"""
+    # Role/Permission 相关功能已删除，返回空路由
+    return Router(tags=['角色API'])

@@ -18,12 +18,9 @@ from app.user.api import (
     list_users,
 )
 # 导入验证器
-from app.user.schemas import (
-    UserLoginSchema,
-    UserRegisterSchema,
-    UserUpdateSchema,
-    ChangePasswordSchema,
-)
+from app.user.api.auth_schemas import UserLoginSchema, UserRegisterSchema
+from app.user.api.admin_schemas import UserUpdateSchema
+from app.user.api.user_schemas import ChangePasswordSchema
 
 
 class UserApiTestCase(TestCase):
