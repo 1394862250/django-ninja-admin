@@ -1,4 +1,9 @@
-"""设置管理API"""
+"""设置管理API - 重构版
+符合架构约束：
+1. API 层只负责参数解析与返回
+2. 权限判断在 Flow 中
+3. 业务逻辑在 Flow/Action 中
+"""
 import os
 from uuid import uuid4
 from typing import Dict, Any, Optional, List, Literal
@@ -17,7 +22,6 @@ from pydantic import Field
 
 from .models import SystemSetting
 from .flows.setting_flows import (
-    can_manage_settings_flow,
     get_settings_grouped_flow,
     get_setting_value_flow,
     update_setting_value_flow,
@@ -26,6 +30,10 @@ from .flows.setting_flows import (
     validate_setting_value_flow,
     get_settings_dictionary_flow,
     reset_settings_to_defaults_flow,
+    create_setting_flow,
+    update_setting_flow,
+    delete_setting_flow,
+    can_manage_settings_flow,
 )
 from app.utils.responses import ApiResponse
 
@@ -123,7 +131,7 @@ class SettingValueOut(Schema):
 
 @api_controller("/settings", tags=["系统设置"])
 class SettingController(ModelControllerBase):
-    """系统设置控制器"""
+    """系统设置控制器 - 重构版"""
     model_config = ModelConfig(
         model=SystemSetting,
         schema_config=ModelSchemaConfig(
@@ -137,36 +145,37 @@ class SettingController(ModelControllerBase):
         return get_settings_queryset_flow()
 
     def create(self, payload: SystemSettingCreate):
-        """创建设置"""
+        """创建设置 - Flow 内部处理权限判断"""
         user = self.request.user
-        can_manage, error_msg = can_manage_settings_flow(user)
-        if not can_manage:
-            return error_response(error_msg, status_code=403)
-        return super().create(payload)
+        success, error_msg, setting = create_setting_flow(user, payload.dict())
+        if not success:
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
+        return success_response(message="设置创建成功")
 
     def update(self, id: int, payload: SystemSettingUpdate):
-        """更新设置"""
+        """更新设置 - Flow 内部处理权限判断"""
         user = self.request.user
-        can_manage, error_msg = can_manage_settings_flow(user)
-        if not can_manage:
-            return error_response(error_msg, status_code=403)
-        return super().update(id, payload)
+        # 过滤掉 None 值
+        update_data = {k: v for k, v in payload.dict().items() if v is not None}
+        success, error_msg, setting = update_setting_flow(user, id, update_data)
+        if not success:
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
+        return success_response(message="设置更新成功")
 
     def partial_update(self, id: int, payload: SystemSettingUpdate):
-        """部分更新设置"""
-        user = self.request.user
-        can_manage, error_msg = can_manage_settings_flow(user)
-        if not can_manage:
-            return error_response(error_msg, status_code=403)
-        return super().partial_update(id, payload)
+        """部分更新设置 - Flow 内部处理权限判断"""
+        return self.update(id, payload)
 
     def delete(self, id: int):
-        """删除设置"""
+        """删除设置 - Flow 内部处理权限判断"""
         user = self.request.user
-        can_manage, error_msg = can_manage_settings_flow(user)
-        if not can_manage:
-            return error_response(error_msg, status_code=403)
-        return super().delete(id)
+        success, error_msg = delete_setting_flow(user, id)
+        if not success:
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
+        return success_response(message="设置已删除")
 
     @route.get("/grouped", response=Dict[str, Any])
     def get_settings_grouped(self):
@@ -195,31 +204,32 @@ class SettingController(ModelControllerBase):
 
     @route.put("/value/{key}", response=SettingValueOut)
     def update_setting_value(self, key: str, data: SystemSettingValueUpdate):
-        """更新设置值"""
+        """更新设置值 - Flow 内部处理权限判断"""
         user = self.request.user
         success, error_msg, result = update_setting_value_flow(user, key, data.value, data.validate)
         if not success:
-            status_code = 404 if "不存在" in error_msg else 400
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
             return error_response(error_msg, status_code=status_code)
         return result
 
     @route.post("/batch-update", response=Dict[str, Any])
     def batch_update_settings(self, payload: BatchUpdateSettings):
-        """批量更新设置"""
+        """批量更新设置 - Flow 内部处理权限判断"""
         user = self.request.user
         settings_data = [{"key": item.key, "value": item.value, "validate": item.validate} for item in payload.settings]
         success, error_msg, result = batch_update_settings_flow(user, settings_data)
         if not success:
-            return error_response(error_msg, status_code=403)
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
         return success_response(data=result)
 
     @route.delete("/by-key/{key}")
     def delete_setting(self, key: str):
-        """根据键名删除设置"""
+        """根据键名删除设置 - Flow 内部处理权限判断"""
         user = self.request.user
         success, error_msg = delete_setting_by_key_flow(user, key)
         if not success:
-            status_code = 404 if "不存在" in error_msg else 403
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 404 if "不存在" in error_msg else 400)
             return error_response(error_msg, status_code=status_code)
         return success_response(message="设置已删除")
 
@@ -239,20 +249,22 @@ class SettingController(ModelControllerBase):
 
     @route.post("/reset-defaults", response=Dict[str, Any])
     def reset_settings_to_defaults(self):
-        """重置设置为默认值"""
+        """重置设置为默认值 - Flow 内部处理权限判断"""
         user = self.request.user
         success, error_msg, reset_count = reset_settings_to_defaults_flow(user)
         if not success:
-            return error_response(error_msg, status_code=403)
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
         return success_response(message=f"已重置 {reset_count} 项设置", data={"reset_count": reset_count})
 
     @route.post("/upload", response=Dict[str, Any])
     def upload_setting_asset(self, file: UploadedFile = File(...)):
-        """上传设置资源文件"""
+        """上传设置资源文件 - Flow 内部处理权限判断"""
         user = self.request.user
         can_manage, error_msg = can_manage_settings_flow(user)
         if not can_manage:
-            return error_response(error_msg, status_code=403)
+            status_code = 401 if "需要登录访问" in error_msg else (403 if "需要管理员权限" in error_msg else 400)
+            return error_response(error_msg, status_code=status_code)
 
         if not file.content_type.startswith(("image/", "video/", "application/")):
             return error_response(message="不支持的文件类型", status_code=400)

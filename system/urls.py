@@ -22,6 +22,7 @@ from ninja_extra import NinjaExtraAPI
 
 # 导入User微服务API
 from app.user.api import create_user_api_router, create_captcha_api_router, create_auth_api_router, create_user_feature_api_router, create_admin_api_router, create_role_api_router
+from app.user.api.admin_extra import AdminExtraController
 from app.notification.api import NotificationController
 from app.setting.api import SettingController
 from app.log.api import LogController
@@ -35,10 +36,11 @@ api = NinjaExtraAPI(
     openapi_url="/openapi.json",  # 显式指定OpenAPI Schema URL
 )
 
-# 注册日志控制器（自动CRUD + 统计）
+# 注册 Extra 控制器（自动CRUD + 统计）
 api.register_controllers(LogController)
 api.register_controllers(NotificationController)
 api.register_controllers(SettingController)
+api.register_controllers(AdminExtraController)  # 管理后台纯CRUD接口
 
 # 注册User微服务API到根路径
 api.add_router("", create_user_api_router())

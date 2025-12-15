@@ -294,3 +294,56 @@ def get_security_config_flow() -> Dict[str, Any]:
     ]
     return get_many_settings_flow(config_keys)
 
+
+def create_setting_flow(user: User, setting_data: Dict[str, Any]) -> Tuple[bool, Optional[str], Optional[SystemSetting]]:
+    """创建设置流程 - 包含权限判断"""
+    can_manage, error_msg = can_manage_settings_flow(user)
+    if not can_manage:
+        return False, error_msg, None
+
+    try:
+        setting = SystemSetting.objects.create(**setting_data)
+        return True, None, setting
+    except Exception as e:
+        return False, str(e), None
+
+
+def update_setting_flow(user: User, setting_id: int, update_data: Dict[str, Any]) -> Tuple[bool, Optional[str], Optional[SystemSetting]]:
+    """更新设置流程 - 包含权限判断"""
+    can_manage, error_msg = can_manage_settings_flow(user)
+    if not can_manage:
+        return False, error_msg, None
+
+    try:
+        setting = get_setting_by_id_action(setting_id)
+        for key, value in update_data.items():
+            if value is not None and hasattr(setting, key):
+                setattr(setting, key, value)
+        setting.save()
+
+        # 清除缓存
+        clear_setting_cache_action(setting.key)
+        return True, None, setting
+    except SystemSetting.DoesNotExist:
+        return False, "设置不存在", None
+    except Exception as e:
+        return False, str(e), None
+
+
+def delete_setting_flow(user: User, setting_id: int) -> Tuple[bool, Optional[str]]:
+    """删除设置流程 - 包含权限判断"""
+    can_manage, error_msg = can_manage_settings_flow(user)
+    if not can_manage:
+        return False, error_msg
+
+    try:
+        setting = get_setting_by_id_action(setting_id)
+        key = setting.key
+        delete_setting_action(setting)
+        clear_setting_cache_action(key)
+        return True, None
+    except SystemSetting.DoesNotExist:
+        return False, "设置不存在"
+    except Exception as e:
+        return False, str(e)
+
