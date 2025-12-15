@@ -46,6 +46,17 @@ def error_response(message="操作失败", status_code=400, data=None):
     return ApiResponse(data=data, message=message, success=False, status_code=status_code).to_json_response()
 
 
+def get_error_status_code(error_msg: str) -> int:
+    """根据错误消息确定HTTP状态码"""
+    if "需要登录访问" in error_msg:
+        return 401
+    if "需要管理员权限" in error_msg:
+        return 403
+    if "不存在" in error_msg:
+        return 404
+    return 400
+
+
 def serialize_notification(notification: Notification) -> Dict:
     """序列化通知对象"""
     return {
@@ -251,7 +262,7 @@ class NotificationController(ModelControllerBase):
             request=self.request,
         )
         if not success:
-            status_code = 404 if "不存在" in error_msg else 400
+            status_code = get_error_status_code(error_msg)
             return error_response(error_msg, status_code=status_code)
         data = [serialize_notification(n) for n in notifications]
         return success_response(
@@ -266,7 +277,7 @@ class NotificationController(ModelControllerBase):
         user = self.request.user
         success, error_msg, notification = send_notification_flow(user, notification_id, self.request)
         if not success:
-            status_code = 404 if "不存在" in error_msg else 400
+            status_code = get_error_status_code(error_msg)
             return error_response(error_msg, status_code=status_code)
         return success_response(serialize_notification(notification), message="通知已发送")
 
@@ -276,6 +287,6 @@ class NotificationController(ModelControllerBase):
         user = self.request.user
         success, error_msg = delete_notification_flow(user, notification_id, self.request)
         if not success:
-            status_code = 404 if "不存在" in error_msg else 403
+            status_code = get_error_status_code(error_msg)
             return error_response(error_msg, status_code=status_code)
         return success_response(message="通知已删除")

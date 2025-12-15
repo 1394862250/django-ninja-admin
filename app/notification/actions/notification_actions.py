@@ -17,9 +17,11 @@ def get_notifications_queryset_action() -> QuerySet:
 def get_user_notifications_action(user) -> QuerySet:
     """获取用户的通知查询集"""
     queryset = get_notifications_queryset_action()
-    if user.is_authenticated and not (user.is_staff or user.is_superuser):
-        return queryset.filter(recipient=user)
-    return queryset
+    if not user.is_authenticated:
+        return queryset.none()
+    if user.is_staff or user.is_superuser:
+        return queryset
+    return queryset.filter(recipient=user)
 
 
 def get_notification_action(notification_id: int) -> Notification:
