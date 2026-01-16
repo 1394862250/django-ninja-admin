@@ -1,0 +1,196 @@
+{% extends "user/base.html" %}
+
+{% block title %}用户注册 - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-slate-900 dark:text-white">
+            创建新账户
+        </h2>
+        <p class="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+            已有账号？
+            <a href="{% url 'web:login' %}" class="font-medium text-primary hover:text-primary-hover">
+                立即登录
+            </a>
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-xl">
+        <div class="modern-card py-8 px-4 sm:px-10">
+            <form class="space-y-6" id="registerForm">
+                <!-- 基本信息网格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="username" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">用户名 *</label>
+                        <input id="username" name="username" type="text" required class="modern-input block w-full px-4 py-2.5" placeholder="仅限字母/数字">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">电子邮箱 *</label>
+                        <input id="email" name="email" type="email" required class="modern-input block w-full px-4 py-2.5" placeholder="user@example.com">
+                    </div>
+                </div>
+
+                <!-- 密码网格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="password1" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">设置密码 *</label>
+                        <input id="password1" name="password1" type="password" required class="modern-input block w-full px-4 py-2.5" placeholder="至少8位">
+                    </div>
+                    <div>
+                        <label for="password2" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">确认密码 *</label>
+                        <input id="password2" name="password2" type="password" required class="modern-input block w-full px-4 py-2.5" placeholder="再次输入">
+                    </div>
+                </div>
+
+                <!-- 扩展信息折叠 -->
+                <div class="border-t border-slate-100 dark:border-slate-800 pt-6">
+                    <button type="button" onclick="document.getElementById('extraFields').classList.toggle('hidden')" class="flex items-center text-sm font-semibold text-slate-400 hover:text-primary transition-colors">
+                        <i class="fas fa-circle-plus mr-2"></i> 补充个人资料 (可选)
+                    </button>
+                    
+                    <div id="extraFields" class="hidden space-y-6 mt-6 animate-fade-in">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="nickname" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">昵称</label>
+                                <input id="nickname" name="nickname" type="text" class="modern-input block w-full px-4 py-2.5" placeholder="显示名称">
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">手机号码</label>
+                                <input id="phone" name="phone" type="tel" class="modern-input block w-full px-4 py-2.5" placeholder="11位手机号">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="gender" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">性别</label>
+                                <select id="gender" name="gender" class="modern-input block w-full px-4 py-2.5 appearance-none">
+                                    <option value="">请选择</option>
+                                    <option value="male">男</option>
+                                    <option value="female">女</option>
+                                    <option value="other">其他</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="birth_date" class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">生日</label>
+                                <input id="birth_date" name="birth_date" type="date" class="modern-input block w-full px-4 py-2.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 验证码 -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase ml-1 mb-2">图形验证码 *</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="captcha" name="captcha" required class="modern-input flex-1 px-4 py-2.5" placeholder="请输入图片验证码">
+                        <div class="flex-shrink-0 h-11 w-32 modern-card overflow-hidden cursor-pointer group relative" onclick="refreshCaptcha()">
+                            <img id="captcha-image" src="" alt="验证码" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40 items-center justify-center text-white hidden group-hover:flex">
+                                <i class="fas fa-rotate"></i>
+                            </div>
+                        </div>
+                        <input type="hidden" id="captcha-key" name="captcha_key">
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded cursor-pointer">
+                    <label for="terms" class="ml-2 block text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
+                        我已阅读并同意 <a href="#" class="text-primary hover:underline">服务条款</a> 和 <a href="#" class="text-primary hover:underline">隐私政策</a>
+                    </label>
+                </div>
+
+                <div>
+                    <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg shadow-orange-600/20 text-sm font-bold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200">
+                        <span>立即注册</span>
+                        <i class="fas fa-spinner fa-spin ml-2 hidden" id="spinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const refreshCaptcha = async () => {
+        try {
+            const res = await fetch('/api/captcha/generate');
+            const result = await res.json();
+            if (result.success && result.data) {
+                document.getElementById('captcha-key').value = result.data.captcha_key;
+                document.getElementById('captcha-image').src = result.data.captcha_image_url;
+                document.getElementById('captcha').value = '';
+            }
+        } catch (err) { console.error('Captcha refresh failed', err); }
+    };
+
+    document.addEventListener('DOMContentLoaded', refreshCaptcha);
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('spinner');
+        
+        // 校验两次密码
+        const p1 = document.getElementById('password1').value;
+        const p2 = document.getElementById('password2').value;
+        if (p1 !== p2) {
+            Swal.fire({ icon: 'error', title: '验证失败', text: '两次输入的密码不一致' });
+            return;
+        }
+
+        submitBtn.disabled = true;
+        spinner.classList.remove('hidden');
+
+        // 构建数据
+        const formData = {
+            username: document.getElementById('username').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password1: p1,
+            password2: p2,
+            captcha: document.getElementById('captcha').value.trim(),
+            captcha_key: document.getElementById('captcha-key').value,
+            nickname: document.getElementById('nickname').value.trim() || null,
+            phone: document.getElementById('phone').value.trim() || null,
+            gender: document.getElementById('gender').value || null,
+            birth_date: document.getElementById('birth_date').value || null
+        };
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Toast.fire({ icon: 'success', title: '注册成功！正在前往登录...' });
+                setTimeout(() => window.location.href = '{% url "web:login" %}', 1500);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: '注册失败',
+                    text: result.message || '请检查输入信息',
+                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
+                    color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+                });
+                refreshCaptcha();
+                submitBtn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Register Error:', error);
+            Toast.fire({ icon: 'error', title: '网络连接失败' });
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

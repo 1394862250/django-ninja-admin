@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name|default:"系统管理平台" }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/modern-ui.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#ea580c',
+                            hover: '#c2410c',
+                        }
+                    },
+                    borderRadius: {
+                        'modern': '0.75rem',
+                    }
+                }
+            }
+        }
+    </script>
+    {% block additional_style %}{% endblock %}
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
+    <!-- 现代化顶部导航栏 -->
+    <nav class="glass-header border-b border-slate-200 dark:border-slate-800 fixed w-full z-40 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-tight">{% include "components/system_title.html" %}</span>
+                    </a>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <!-- 主题切换 -->
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <i class="fas fa-sun text-amber-500 dark:hidden"></i>
+                        <i class="fas fa-moon text-indigo-400 hidden dark:inline"></i>
+                    </button>
+
+                    <!-- 用户菜单 -->
+                    {% if user.is_authenticated %}
+                    <div class="relative ml-2">
+                        <button id="user-menu-button" class="flex items-center space-x-3 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                            <div id="navbar-avatar" class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold ring-2 ring-white dark:ring-slate-900 overflow-hidden">
+                                <span id="navbar-avatar-initial">{{ user.username.0|upper }}</span>
+                                <img id="navbar-avatar-image" src="" alt="" class="w-full h-full object-cover hidden">
+                            </div>
+                            <span class="hidden md:block text-sm font-medium pr-2" id="navbar-username">
+                                {{ user.profile.nickname|default:user.username }}
+                            </span>
+                        </button>
+                        
+                        <!-- 下拉菜单 -->
+                        <div id="user-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-modern shadow-xl z-50 py-2">
+                            <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                <p class="text-xs text-slate-500">已登录为</p>
+                                <p class="text-sm font-semibold truncate">{{ user.email|default:user.username }}</p>
+                            </div>
+                            <a href="{% url 'web:user_profile' %}" class="flex items-center px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <i class="fas fa-id-card w-5 text-slate-400"></i>
+                                <span>个人资料</span>
+                            </a>
+                            {% if user.is_staff %}
+                            <a href="{% url 'web:admin_dashboard' %}" class="flex items-center px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-primary font-medium">
+                                <i class="fas fa-shield-halved w-5"></i>
+                                <span>管理后台</span>
+                            </a>
+                            {% endif %}
+                            <button id="change-password-btn" class="w-full flex items-center px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left">
+                                <i class="fas fa-lock w-5 text-slate-400"></i>
+                                <span>修改密码</span>
+                            </button>
+                            <div class="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
+                                <button id="logout-link" class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left">
+                                    <i class="fas fa-sign-out-alt w-5"></i>
+                                    <span>安全退出</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{% url 'web:login' %}" class="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm">登录系统</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="pt-24 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {% if messages %}
+            <div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+                {% for message in messages %}
+                <div class="modern-card p-4 mb-3 flex items-start space-x-3 {% if message.tags == 'error' %}border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20{% elif message.tags == 'success' %}border-l-4 border-l-green-500 bg-green-50 dark:bg-green-900/20{% else %}border-l-4 border-l-primary bg-orange-50 dark:bg-orange-900/20{% endif %} animate-bounce-short">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'error' %}
+                        <i class="fas fa-circle-xmark text-red-500"></i>
+                        {% elif message.tags == 'success' %}
+                        <i class="fas fa-circle-check text-green-500"></i>
+                        {% else %}
+                        <i class="fas fa-circle-info text-primary"></i>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm font-medium">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- 修改密码模态框 -->
+    {% if user.is_authenticated %}
+    {% include "components/change_password.html" %}
+    {% endif %}
+
+    <!-- 脚本 -->
+    {% block scripts %}{% endblock %}
+
+    <script>
+        // 工具函数：获取Cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 统一提示
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // 主题切换逻辑
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+        });
+
+        // 用户菜单逻辑
+        const userMenuBtn = document.getElementById('user-menu-button');
+        const userMenu = document.getElementById('user-menu');
+
+        if (userMenuBtn && userMenu) {
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        // 修改密码
+        const changePassBtn = document.getElementById('change-password-btn');
+        if (changePassBtn && typeof window.openChangePasswordModal === 'function') {
+            changePassBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                userMenu.classList.add('hidden');
+                window.openChangePasswordModal();
+            });
+        }
+
+        // 登出
+        const logoutBtn = document.getElementById('logout-link');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const result = await Swal.fire({
+                    title: '确认退出?',
+                    text: "您将安全退出当前登录状态",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ea580c',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: '确定退出',
+                    cancelButtonText: '取消',
+                    background: html.classList.contains('dark') ? '#1e293b' : '#fff',
+                    color: html.classList.contains('dark') ? '#fff' : '#000',
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        const res = await fetch('/api/auth/logout', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                        });
+                        if (res.ok) window.location.href = '{% url "web:login" %}';
+                    } catch (err) {
+                        window.location.href = '{% url "web:login" %}';
+                    }
+                }
+            });
+        }
+
+        // 加载用户信息适配新接口
+        async function loadUserInfo() {
+            if (!document.getElementById('navbar-avatar')) return;
+            try {
+                const res = await fetch('/api/user/profile');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    const user = result.data;
+                    const profile = user.profile || {};
+                    
+                    // 更新用户名
+                    const nameEl = document.getElementById('navbar-username');
+                    if (nameEl) nameEl.textContent = profile.nickname || user.username;
+
+                    // 更新头像
+                    if (profile.avatar) {
+                        const img = document.getElementById('navbar-avatar-image');
+                        const initial = document.getElementById('navbar-avatar-initial');
+                        if (img && initial) {
+                            img.src = profile.avatar;
+                            img.classList.remove('hidden');
+                            initial.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch (err) { console.error('Failed to load user info', err); }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadUserInfo);
+    </script>
+    
+    {% include "components/alert_components.html" %}
+</body>
+</html>

@@ -1,0 +1,204 @@
+{% extends "user/base.html" %}
+
+{% block title %}首页 - {{ user.username }}{% endblock %}
+
+{% block page_title %}个人控制台{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">欢迎回来，<span id="username-display">{{ user.username }}</span></h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">这是您的个人控制面板</p>
+    </div>
+
+    <!-- 快捷操作区 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- 个人信息卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center mb-4">
+                <div id="avatar-container" class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">
+                    <span id="avatar-initial">{{ user.username.0|upper }}</span>
+                    <img id="avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white" id="card-username">{{ user.username }}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">用户ID: {{ user.id }}</p>
+                </div>
+            </div>
+            <a href="{% url 'web:user_profile' %}" class="inline-flex items-center text-sm text-blue-600 dark:text-blue-500 hover:underline">
+                <span>查看个人信息</span>
+                <i class="fas fa-chevron-right ml-2 text-xs"></i>
+            </a>
+        </div>
+
+        <!-- 密码管理卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">账户安全</h3>
+                <i class="fas fa-shield-alt text-green-500 text-xl"></i>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">定期更新密码可以提高账户安全性</p>
+            <button id="quick-change-password" class="inline-flex items-center text-sm text-blue-600 dark:text-blue-500 hover:underline">
+                <span>修改密码</span>
+                <i class="fas fa-chevron-right ml-2 text-xs"></i>
+            </button>
+        </div>
+
+        <!-- 系统信息卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">系统信息</h3>
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="space-y-2">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span>最后登录时间：</span>
+                    <span id="last-login">{{ user.last_login|date:"Y-m-d H:i"|default:"从未登录" }}</span>
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span>账户创建时间：</span>
+                    <span id="date-joined">{{ user.date_joined|date:"Y-m-d" }}</span>
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span>登录次数：</span>
+                    <span id="login-count">0</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">最近活动</h2>
+            <button id="refresh-activities" class="text-sm text-blue-600 dark:text-blue-500 hover:underline">
+                <i class="fas fa-sync-alt mr-1"></i>刷新
+            </button>
+        </div>
+        <div id="activities-container" class="space-y-3">
+            <div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                <i class="fas fa-spinner fa-spin mr-2"></i>加载中...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 快速打开修改密码模态框
+    document.getElementById('quick-change-password').addEventListener('click', function() {
+        document.getElementById('change-password-btn').click();
+    });
+
+    // 加载用户首页数据
+    async function loadUserHome() {
+        try {
+            const response = await fetch('/api/user/home', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                const userData = data.data;
+                
+                // 更新用户名
+                document.getElementById('username-display').textContent = userData.username;
+                document.getElementById('card-username').textContent = userData.username;
+                
+                // 更新登录信息
+                if (userData.last_login) {
+                    document.getElementById('last-login').textContent = userData.last_login;
+                }
+                document.getElementById('date-joined').textContent = userData.date_joined;
+                
+                // 更新登录次数
+                if (userData.profile && userData.profile.login_count !== undefined) {
+                    document.getElementById('login-count').textContent = userData.profile.login_count;
+                }
+                
+                // 更新头像
+                if (userData.profile && userData.profile.avatar) {
+                    const avatarImg = document.getElementById('avatar-image');
+                    const avatarInitial = document.getElementById('avatar-initial');
+                    avatarImg.src = userData.profile.avatar;
+                    avatarImg.classList.remove('hidden');
+                    avatarInitial.classList.add('hidden');
+                }
+            }
+        } catch (error) {
+            console.error('加载用户数据失败:', error);
+        }
+    }
+
+    // 加载活动记录
+    async function loadActivities() {
+        const container = document.getElementById('activities-container');
+        container.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>加载中...</div>';
+        
+        try {
+            const response = await fetch('/api/user/activities?page=1&page_size=10', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.activities) {
+                const activities = data.data.activities;
+                
+                if (activities.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">暂无活动记录</div>';
+                } else {
+                    container.innerHTML = activities.map(activity => `
+                        <div class="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <i class="fas fa-${getActivityIcon(activity.activity_type)} text-blue-600 dark:text-blue-400 text-sm"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">${activity.description}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    ${activity.created_at}
+                                    ${activity.ip_address ? ` · IP: ${activity.ip_address}` : ''}
+                                </p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } else {
+                container.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">暂无活动记录</div>';
+            }
+        } catch (error) {
+            console.error('加载活动记录失败:', error);
+            container.innerHTML = '<div class="text-sm text-red-500 dark:text-red-400 text-center py-4">加载失败，请刷新重试</div>';
+        }
+    }
+
+    // 获取活动图标
+    function getActivityIcon(activityType) {
+        const icons = {
+            'login': 'sign-in-alt',
+            'logout': 'sign-out-alt',
+            'register': 'user-plus',
+            'profile_update': 'user-edit',
+            'password_change': 'key',
+            'avatar_upload': 'image',
+            'admin_action': 'cog'
+        };
+        return icons[activityType.toLowerCase()] || 'circle';
+    }
+
+    // 刷新活动记录
+    document.getElementById('refresh-activities').addEventListener('click', function() {
+        loadActivities();
+    });
+
+    // 页面加载时获取数据
+    window.addEventListener('DOMContentLoaded', function() {
+        loadUserHome();
+        loadActivities();
+    });
+</script>
+{% endblock %}

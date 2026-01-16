@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}管理后台 - {{ site_name|default:"系统管理平台" }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/modern-ui.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#ea580c',
+                            hover: '#c2410c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .dark .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+    </style>
+    {% block additional_style %}{% endblock %}
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex">
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-50 transition-all duration-300">
+        <div class="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800">
+            <a href="/" class="flex items-center space-x-2">
+                <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-white text-sm">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <span class="font-bold text-lg">{% include "components/system_title.html" %}</span>
+            </a>
+        </div>
+        
+        <div class="flex-1 py-4 overflow-y-auto sidebar-scroll h-[calc(100vh-64px)]">
+            <nav class="space-y-1 px-3">
+                <div class="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">核心</div>
+                <a href="{% url 'web:admin_dashboard' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-pie w-5"></i>
+                    <span class="text-sm">仪表盘</span>
+                </a>
+                
+                <div class="pt-4 px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">管理</div>
+                <a href="{% url 'web:user_management' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'users' %}active{% endif %}">
+                    <i class="fas fa-users-gear w-5"></i>
+                    <span class="text-sm">用户管理</span>
+                </a>
+                <a href="{% url 'web:notification_management' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'notifications' %}active{% endif %}">
+                    <i class="fas fa-bullhorn w-5"></i>
+                    <span class="text-sm">通知中心</span>
+                </a>
+                <a href="{% url 'web:log_management' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'logs' %}active{% endif %}">
+                    <i class="fas fa-receipt w-5"></i>
+                    <span class="text-sm">审计日志</span>
+                </a>
+                <a href="{% url 'web:setting_management' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'settings' %}active{% endif %}">
+                    <i class="fas fa-sliders w-5"></i>
+                    <span class="text-sm">系统设置</span>
+                </a>
+
+                <div class="pt-4 px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">开发者</div>
+                <a href="{% url 'web:api_docs' %}" class="sidebar-link flex items-center space-x-3 transition-all {% if active_menu == 'api_docs' %}active{% endif %}">
+                    <i class="fas fa-code w-5"></i>
+                    <span class="text-sm">接口文档</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- 右侧内容 -->
+    <div class="flex-1 ml-64 min-h-screen flex flex-col">
+        <!-- 顶部导航 -->
+        <header class="glass-header h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-40">
+            <h2 class="font-semibold text-lg">{% block page_title %}仪表盘{% endblock %}</h2>
+            
+            <div class="flex items-center space-x-4">
+                <!-- 主题 -->
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-sun text-amber-500 dark:hidden"></i>
+                    <i class="fas fa-moon text-indigo-400 hidden dark:inline"></i>
+                </button>
+
+                <!-- 通知 -->
+                <button id="notification-btn" class="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-bell text-slate-600 dark:text-slate-400"></i>
+                    <span id="notification-count" class="absolute top-1 right-1 min-w-[16px] h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+                </button>
+
+                <!-- 管理员菜单 -->
+                <div class="relative">
+                    <button id="admin-user-menu-button" class="flex items-center space-x-3 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                        <div id="admin-navbar-avatar" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary font-bold overflow-hidden">
+                            <span id="admin-navbar-avatar-initial">{{ user.username.0|upper }}</span>
+                            <img id="admin-navbar-avatar-image" src="" class="w-full h-full object-cover hidden">
+                        </div>
+                        <i class="fas fa-angle-down text-slate-400 text-xs"></i>
+                    </button>
+                    
+                    <div id="admin-user-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-modern shadow-xl z-50 py-2">
+                        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold overflow-hidden">
+                                <span id="admin-menu-avatar-initial">{{ user.username.0|upper }}</span>
+                                <img id="admin-menu-avatar-image" src="" class="w-full h-full object-cover hidden">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold truncate" id="admin-menu-username">{{ user.profile.nickname|default:user.username }}</p>
+                                <p class="text-[10px] text-slate-500 truncate uppercase tracking-tighter font-semibold">超级管理员</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'web:user_profile' %}" class="flex items-center px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-user-gear w-5 text-slate-400"></i>
+                            <span>个人设置</span>
+                        </a>
+                        <button id="admin-header-change-password-btn" class="w-full flex items-center px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left">
+                            <i class="fas fa-key w-5 text-slate-400"></i>
+                            <span>修改密码</span>
+                        </button>
+                        <div class="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
+                            <button id="admin-header-logout-link" class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left">
+                                <i class="fas fa-door-open w-5"></i>
+                                <span>退出后台</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 内容 -->
+        <main class="p-8 flex-1">
+            {% block admin_content %}{% endblock %}
+        </main>
+
+        <footer class="p-8 pt-0 text-center text-xs text-slate-400">
+            &copy; 2024 Django Ninja Admin. Built with ❤️ and Modern UI.
+        </footer>
+    </div>
+
+    <!-- 模态框与通用脚本同 user/base.html -->
+    {% include "components/notification_modal.html" %}
+    {% include "components/change_password.html" %}
+    
+    <script>
+        // 核心脚本复用逻辑（省略冗余逻辑，保持关键点）
+        const html = document.documentElement;
+        const getCookie = (name) => {
+            let v = null;
+            if (document.cookie && document.cookie !== '') {
+                document.cookie.split(';').forEach(c => {
+                    c = c.trim(); if (c.substring(0, name.length + 1) === (name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+                });
+            }
+            return v;
+        };
+
+        // 主题
+        const themeBtn = document.getElementById('theme-toggle');
+        themeBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+        });
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) html.classList.add('dark');
+
+        // 菜单
+        const adminMenuBtn = document.getElementById('admin-user-menu-button');
+        const adminMenu = document.getElementById('admin-user-menu');
+        adminMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); adminMenu.classList.toggle('hidden'); });
+        document.addEventListener('click', () => adminMenu.classList.add('hidden'));
+
+        // 数据加载与登出... (同 user/base.html)
+        async function loadAdminInfo() {
+            try {
+                const res = await fetch('/api/user/profile');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    const u = result.data;
+                    document.getElementById('admin-navbar-username').textContent = u.profile?.nickname || u.username;
+                    document.getElementById('admin-menu-username').textContent = u.profile?.nickname || u.username;
+                    if (u.profile?.avatar) {
+                        ['admin-navbar-avatar', 'admin-menu-avatar'].forEach(p => {
+                            const img = document.getElementById(p + '-image');
+                            const ini = document.getElementById(p + '-initial');
+                            img.src = u.profile.avatar; img.classList.remove('hidden'); ini.classList.add('hidden');
+                        });
+                    }
+                }
+            } catch(e){}
+        }
+        
+        // 通知
+        const notifyBtn = document.getElementById('notification-btn');
+        notifyBtn.addEventListener('click', () => window.toggleNotificationModal?.());
+        
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/api/notifications/unread-count');
+                const r = await res.json();
+                if (r.success) {
+                    const c = r.data.count;
+                    const el = document.getElementById('notification-count');
+                    if (c > 0) { el.textContent = c > 99 ? '99+' : c; el.classList.remove('hidden'); }
+                    else el.classList.add('hidden');
+                }
+            } catch(e){}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { loadAdminInfo(); loadNotifications(); });
+        
+        // 登出逻辑
+        document.getElementById('admin-header-logout-link').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/auth/logout', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } });
+            window.location.href = '{% url "web:login" %}';
+        });
+
+        // 修改密码
+        document.getElementById('admin-header-change-password-btn').addEventListener('click', () => window.openChangePasswordModal?.());
+    </script>
+    
+    {% include "components/alert_components.html" %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

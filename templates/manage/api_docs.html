@@ -1,0 +1,119 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}API接口文档 - {{ block.super }}{% endblock %}
+
+{% block page_title %}API接口文档{% endblock %}
+
+{% block admin_content %}
+<div class="flex flex-col" style="height: calc(100vh - 120px);">
+    <!-- 页面标题和操作按钮 -->
+    <div class="flex justify-between items-center mb-4 flex-shrink-0">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">API接口文档</h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">查看和测试所有可用的API接口</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/api/docs/" target="_blank" class="inline-flex items-center px-4 py-2 bg-orange-500 dark:bg-gray-700 text-white text-sm font-semibold rounded focus:outline-none">
+                <i class="fas fa-external-link-alt mr-2"></i>
+                新窗口打开
+            </a>
+        </div>
+    </div>
+
+    <!-- API文档iframe容器 -->
+    <div class="flex-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden min-h-0 relative">
+        <!-- 加载提示 -->
+        <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 z-10">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin text-3xl text-orange-500 mb-2"></i>
+                <p class="text-gray-600 dark:text-gray-400">正在加载API文档...</p>
+            </div>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div id="error-indicator" class="hidden absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 z-10">
+            <div class="text-center p-6">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-2"></i>
+                <p class="text-gray-800 dark:text-gray-200 mb-4">无法加载API文档</p>
+                <a href="/api/docs/" target="_blank" class="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded">
+                    <i class="fas fa-external-link-alt mr-2"></i>
+                    在新窗口打开
+                </a>
+            </div>
+        </div>
+        
+        <iframe 
+            id="api-docs-iframe"
+            src="/api/docs/" 
+            class="w-full h-full border-0"
+            title="API接口文档"
+            allowfullscreen
+            onload="document.getElementById('loading-indicator').style.display='none';">
+        </iframe>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iframe = document.getElementById('api-docs-iframe');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const errorIndicator = document.getElementById('error-indicator');
+    
+    // 设置超时处理
+    let loadTimeout = setTimeout(function() {
+        if (loadingIndicator && loadingIndicator.style.display !== 'none') {
+            loadingIndicator.style.display = 'none';
+            if (errorIndicator) {
+                errorIndicator.classList.remove('hidden');
+            }
+        }
+    }, 10000); // 10秒超时
+    
+    // 监听iframe加载完成
+    iframe.addEventListener('load', function() {
+        console.log('API文档已加载');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        if (loadTimeout) {
+            clearTimeout(loadTimeout);
+        }
+    });
+    
+    // 处理iframe加载错误
+    iframe.addEventListener('error', function() {
+        console.error('API文档加载失败');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        if (errorIndicator) {
+            errorIndicator.classList.remove('hidden');
+        }
+        if (loadTimeout) {
+            clearTimeout(loadTimeout);
+        }
+    });
+    
+    // 检查iframe是否可以访问（同源检查）
+    try {
+        // 尝试访问iframe内容，如果失败可能是跨域或加载失败
+        setTimeout(function() {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!iframeDoc || iframeDoc.readyState === 'loading') {
+                    // 仍在加载中
+                }
+            } catch (e) {
+                // 跨域限制，这是正常的，说明iframe已加载
+                console.log('API文档iframe已加载（跨域限制正常）');
+            }
+        }, 2000);
+    } catch (e) {
+        console.error('检查iframe状态失败:', e);
+    }
+});
+</script>
+{% endblock %}
+

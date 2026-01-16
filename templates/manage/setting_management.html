@@ -1,0 +1,418 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}系统设置 - {{ block.super }}{% endblock %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block admin_content %}
+<!-- 头部统计与操作 -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0">
+    <div class="flex items-center space-x-4">
+        <div class="p-3 bg-primary/10 rounded-xl text-primary">
+            <i class="fas fa-sliders text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">系统全局配置</h2>
+            <p class="text-sm text-slate-500">管理系统运行参数、功能开关与界面展示</p>
+        </div>
+    </div>
+    <div class="flex items-center space-x-3">
+        <button id="refresh-settings-btn" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all">
+            <i class="fas fa-arrows-rotate mr-2"></i>刷新
+        </button>
+        <button id="open-create-setting-btn" class="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover shadow-sm transition-all">
+            <i class="fas fa-plus-circle mr-2"></i>新增配置
+        </button>
+    </div>
+</div>
+
+<div id="settings-alert" class="hidden mb-6 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in border"></div>
+
+<!-- 设置列表 -->
+<div class="modern-card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-slate-50/50 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800">
+                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest w-16">#</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest w-64">配置项</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">配置值</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest w-72">描述</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right w-24">操作</th>
+                </tr>
+            </thead>
+            <tbody id="settings-table-body" class="divide-y divide-slate-50 dark:divide-slate-800">
+                <tr>
+                    <td colspan="5" class="px-6 py-20 text-center">
+                        <div class="inline-block animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+                        <p class="text-slate-500 font-medium">载入系统配置中...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分页 -->
+    <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 bg-slate-50/30 dark:bg-slate-800/10">
+        <div id="settings-pagination-info" class="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            正在载入分页信息...
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="prev-page-btn" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-primary transition-all disabled:opacity-30">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="next-page-btn" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-primary transition-all disabled:opacity-30">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 创建字段模态框 -->
+<div id="create-setting-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="font-bold text-lg">新增配置项</h3>
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">Add New System Configuration</p>
+            </div>
+            <button id="close-create-setting-btn" class="p-2 text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="create-setting-form" class="p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">显示名称 *</label>
+                    <input type="text" name="name" required maxlength="100" class="modern-input w-full px-4 py-2.5" placeholder="如：站点名称">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">配置键名 *</label>
+                    <input type="text" name="key" required maxlength="100" class="modern-input w-full px-4 py-2.5" placeholder="如：system.site_name">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">所属分类 *</label>
+                    <select name="category" required class="modern-input w-full px-4 py-2.5 appearance-none">
+                        <option value="system">系统配置</option>
+                        <option value="feature">功能开关</option>
+                        <option value="ui">界面配置</option>
+                        <option value="email">邮件配置</option>
+                        <option value="security">安全配置</option>
+                        <option value="notification">通知配置</option>
+                        <option value="api">API配置</option>
+                        <option value="business">业务配置</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">数据类型 *</label>
+                    <select name="value_type" required class="modern-input w-full px-4 py-2.5 appearance-none">
+                        <option value="string">字符串</option>
+                        <option value="text">长文本</option>
+                        <option value="boolean">布尔值</option>
+                        <option value="integer">整数</option>
+                        <option value="float">浮点数</option>
+                        <option value="json">JSON</option>
+                        <option value="url">URL</option>
+                        <option value="email">邮箱</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">显示排序</label>
+                    <input type="number" name="sort_order" value="0" class="modern-input w-full px-4 py-2.5">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">默认值</label>
+                    <input type="text" name="default_value" class="modern-input w-full px-4 py-2.5" placeholder="留空则无默认值">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">当前值</label>
+                    <input type="text" name="value" class="modern-input w-full px-4 py-2.5" placeholder="立即生效的值">
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">配置描述</label>
+                <textarea name="description" rows="3" class="modern-input w-full px-4 py-2.5 resize-none" placeholder="描述该配置的作用..."></textarea>
+            </div>
+
+            <div class="mt-8 flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" id="cancel-create-setting-btn" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">取消</button>
+                <button type="submit" class="px-8 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-hover shadow-lg shadow-orange-600/20 transition-all flex items-center">
+                    <i class="fas fa-save mr-2"></i>保存配置
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tableBody = document.getElementById('settings-table-body');
+    const messageEl = document.getElementById('settings-alert');
+    const paginationInfo = document.getElementById('settings-pagination-info');
+    const refreshBtn = document.getElementById('refresh-settings-btn');
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+    const createBtn = document.getElementById('open-create-setting-btn');
+    const createModal = document.getElementById('create-setting-modal');
+    const createForm = document.getElementById('create-setting-form');
+    const closeCreateBtn = document.getElementById('close-create-setting-btn');
+    const cancelCreateBtn = document.getElementById('cancel-create-setting-btn');
+
+    const state = { page: 1, pageSize: 15, totalPages: 1 };
+
+    const Toast = {
+        fire: (options) => {
+            if (window.showToast) {
+                window.showToast(options.title, options.icon);
+            } else {
+                Swal.fire({
+                    toast: true, position: 'top-end', showConfirmButton: false,
+                    timer: 3000, timerProgressBar: true, ...options
+                });
+            }
+        }
+    };
+
+    const uploadFileInput = document.createElement('input');
+    uploadFileInput.type = 'file'; uploadFileInput.accept = 'image/*';
+    uploadFileInput.classList.add('hidden');
+    document.body.appendChild(uploadFileInput);
+    let pendingUpload = { key: null, input: null };
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function showMessage(type, text) {
+        if (!messageEl) return;
+        const classes = {
+            success: 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-900/30',
+            error: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-900/30',
+            info: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-900/30',
+        };
+        messageEl.className = `px-4 py-3 rounded-xl text-sm font-bold border animate-fade-in ${classes[type] || classes.info}`;
+        messageEl.innerHTML = `<div class="flex items-center"><i class="fas ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-2"></i>${text}</div>`;
+        messageEl.classList.remove('hidden');
+        setTimeout(() => messageEl.classList.add('hidden'), 5000);
+    }
+
+    function renderValueField(setting) {
+        const value = setting.value ?? '';
+        const disabledAttr = setting.is_editable ? '' : 'disabled';
+        const allowUpload = Boolean(setting.extra_options && setting.extra_options.allow_upload);
+        let controlHtml = '';
+
+        if (setting.value_type === 'boolean') {
+            const boolVal = String(value).toLowerCase() === 'true';
+            controlHtml = `
+                <select class="modern-input w-full px-3 py-1.5 appearance-none cursor-pointer"
+                        data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+                    <option value="true" ${boolVal ? 'selected' : ''}>启用 (True)</option>
+                    <option value="false" ${!boolVal ? 'selected' : ''}>禁用 (False)</option>
+                </select>
+            `;
+        } else if (setting.value_type === 'text') {
+            controlHtml = `
+                <textarea rows="2" class="modern-input w-full px-3 py-2 resize-y text-xs"
+                          data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>${escapeHtml(value)}</textarea>
+            `;
+        } else {
+            controlHtml = `
+                <input type="text" class="modern-input w-full px-3 py-1.5 text-sm"
+                       value="${escapeHtml(value)}" data-value-input="true" data-key="${escapeHtml(setting.key)}" ${disabledAttr}>
+            `;
+        }
+
+        if (allowUpload && setting.is_editable) {
+            return `
+                <div class="flex flex-col space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="flex-1">${controlHtml}</div>
+                        <button type="button" data-action="upload-setting" data-key="${escapeHtml(setting.key)}"
+                                class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg hover:text-primary transition-colors" title="上传文件">
+                            <i class="fas fa-cloud-arrow-up"></i>
+                        </button>
+                    </div>
+                    ${value ? `<div class="text-[10px] text-slate-400 truncate">预览: <a href="${value}" target="_blank" class="text-primary hover:underline">${value}</a></div>` : ''}
+                </div>
+            `;
+        }
+        return controlHtml;
+    }
+
+    function renderSettings(settings) {
+        if (!settings.length) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-20 text-center text-slate-400">暂无配置项</td></tr>';
+            return;
+        }
+
+        const startIndex = (state.page - 1) * state.pageSize;
+        tableBody.innerHTML = settings.map((setting, index) => `
+            <tr data-key="${setting.key}" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
+                <td class="px-6 py-4 text-xs font-bold text-slate-400">${startIndex + index + 1}</td>
+                <td class="px-6 py-4">
+                    <div class="font-bold text-slate-800 dark:text-slate-200">${escapeHtml(setting.name)}</div>
+                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${escapeHtml(setting.key)}</div>
+                    <div class="flex items-center space-x-2 mt-2">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">
+                            ${escapeHtml(setting.category)}
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-primary/10 text-primary">
+                            ${escapeHtml(setting.value_type)}
+                        </span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">${renderValueField(setting)}</td>
+                <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    ${setting.description ? escapeHtml(setting.description) : '<span class="italic opacity-50">暂无描述</span>'}
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button data-action="delete-setting" data-key="${setting.key}"
+                            class="p-2 text-slate-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30"
+                            ${setting.is_editable ? '' : 'disabled'} title="删除配置">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadSettings(page = 1) {
+        state.page = page;
+        const tbody = document.getElementById('settings-table-body');
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-20 text-center"><div class="inline-block animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mb-3"></div><p class="text-xs text-slate-400 font-medium uppercase tracking-widest">载入中</p></td></tr>';
+        
+        try {
+            const params = new URLSearchParams({ page, page_size: state.pageSize, active_only: 'true' });
+            const response = await fetch(`/api/settings/list?${params.toString()}`, { credentials: 'same-origin' });
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                renderSettings(data.data.results || []);
+                state.totalPages = data.data.pages || 1;
+                paginationInfo.textContent = `PAGE ${state.page} OF ${state.totalPages} · TOTAL ${data.data.count}`;
+                prevBtn.disabled = state.page <= 1;
+                nextBtn.disabled = state.page >= state.totalPages;
+            }
+        } catch (error) { showMessage('error', '加载设置失败'); }
+    }
+
+    async function saveSettingValue(key, value) {
+        await fetch(`/api/settings/value/${encodeURIComponent(key)}`, {
+            method: 'PUT', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') || '' },
+            body: JSON.stringify({ key, value, validate: true, do_validate: true })
+        });
+    }
+
+    async function handleAutoSave(input) {
+        if (!input || input.disabled) return;
+        const key = input.dataset.key;
+        const value = input.value ?? '';
+        input.classList.add('ring-2', 'ring-primary/20');
+        try {
+            await saveSettingValue(key, value);
+            Toast.fire({ icon: 'success', title: '配置已自动保存' });
+        } catch (error) { Toast.fire({ icon: 'error', title: '保存失败' }); }
+        finally { input.classList.remove('ring-2', 'ring-primary/20'); }
+    }
+
+    tableBody.addEventListener('change', e => {
+        const input = e.target.closest('[data-value-input="true"]');
+        if (input) handleAutoSave(input);
+    });
+
+    tableBody.addEventListener('click', async e => {
+        const uploadBtn = e.target.closest('[data-action="upload-setting"]');
+        if (uploadBtn) {
+            const row = uploadBtn.closest('tr');
+            const input = row.querySelector('[data-value-input="true"]');
+            pendingUpload = { key: uploadBtn.dataset.key, input };
+            uploadFileInput.click();
+            return;
+        }
+
+        const deleteBtn = e.target.closest('[data-action="delete-setting"]');
+        if (deleteBtn) {
+            const key = deleteBtn.dataset.key;
+            const confirmed = await Swal.fire({
+                title: '删除确认', text: `确定要删除配置项 ${key} 吗？`, icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: '确定删除', cancelButtonText: '取消',
+                background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff', color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+            });
+            if (!confirmed.isConfirmed) return;
+            
+            try {
+                await fetch(`/api/settings/by-key/${encodeURIComponent(key)}`, {
+                    method: 'DELETE', credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') || '' }
+                });
+                Toast.fire({ icon: 'success', title: '配置已删除' });
+                loadSettings(state.page);
+            } catch (e) { Toast.fire({ icon: 'error', title: '删除失败' }); }
+        }
+    });
+
+    uploadFileInput.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (!file || !pendingUpload.input) return;
+        const formData = new FormData(); formData.append('file', file);
+        try {
+            const res = await fetch('/api/settings/upload', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success && data.data.url) {
+                pendingUpload.input.value = data.data.url;
+                handleAutoSave(pendingUpload.input);
+                loadSettings(state.page);
+            }
+        } catch (e) { Toast.fire({ icon: 'error', title: '上传失败' }); }
+    });
+
+    refreshBtn.addEventListener('click', () => loadSettings(state.page));
+    prevBtn.addEventListener('click', () => state.page > 1 && loadSettings(state.page - 1));
+    nextBtn.addEventListener('click', () => state.page < state.totalPages && loadSettings(state.page + 1));
+
+    function toggleCreateModal(show) {
+        if (show) createForm.reset();
+        createModal.classList.toggle('hidden', !show);
+    }
+
+    createBtn.addEventListener('click', () => toggleCreateModal(true));
+    [closeCreateBtn, cancelCreateBtn].forEach(b => b.addEventListener('click', () => toggleCreateModal(false)));
+
+    createForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(createForm);
+        const payload = Object.fromEntries(fd.entries());
+        payload.sort_order = Number(payload.sort_order || 0);
+        try {
+            const res = await fetch('/api/settings', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') || '' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                Toast.fire({ icon: 'success', title: '配置创建成功' });
+                toggleCreateModal(false);
+                loadSettings(1);
+            } else throw new Error(data.message);
+        } catch (error) { Toast.fire({ icon: 'error', title: error.message }); }
+    });
+
+    loadSettings(1);
+});
+</script>
+{% endblock %}

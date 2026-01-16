@@ -1,0 +1,190 @@
+<!-- 通知模态框 -->
+<div id="notification-modal" class="hidden fixed inset-0 z-[100] overflow-hidden">
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onclick="closeNotificationModal()"></div>
+    
+    <!-- 模态框内容 -->
+    <div class="absolute right-4 top-16 w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-slide-down">
+        <!-- 头部 -->
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <h3 class="font-bold text-slate-800 dark:text-white">未读通知</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="loadUnreadNotifications()" class="p-2 text-slate-400 hover:text-primary transition-colors" title="刷新">
+                    <i class="fas fa-rotate-right text-xs"></i>
+                </button>
+                <button onclick="closeNotificationModal()" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 通知列表 -->
+        <div id="notification-list-container" class="max-h-[480px] overflow-y-auto sidebar-scroll divide-y divide-slate-50 dark:divide-slate-800/50">
+            <div class="py-12 text-center">
+                <div class="inline-block animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mb-3"></div>
+                <p class="text-xs text-slate-400 font-medium">载入中...</p>
+            </div>
+        </div>
+        
+        <!-- 底部 -->
+        <div class="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center">
+            <a href="/manage/notifications/" class="text-xs font-bold text-primary hover:text-primary-hover transition-colors flex items-center">
+                查看全部通知 <i class="fas fa-chevron-right ml-1.5 text-[10px]"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 加载未读通知列表
+    async function loadUnreadNotifications() {
+        const container = document.getElementById('notification-list-container');
+        try {
+            const isAdmin = {% if user.is_staff or user.is_superuser %}true{% else %}false{% endif %};
+            const apiUrl = isAdmin ? '/api/notifications/manage?is_read=false&page_size=10' : '/api/notifications/unread?page_size=10';
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                renderUnreadNotifications(data.data.results);
+            }
+        } catch (error) {
+            console.error('加载未读通知列表失败:', error);
+            if (container) {
+                container.innerHTML = '<div class="py-12 text-center text-slate-400 text-xs">加载失败</div>';
+            }
+        }
+    }
+
+    // 渲染未读通知列表
+    function renderUnreadNotifications(notifications) {
+        const container = document.getElementById('notification-list-container');
+        if (!container) return;
+        
+        if (notifications.length === 0) {
+            container.innerHTML = `
+                <div class="py-16 text-center">
+                    <div class="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                        <i class="fas fa-bell-slash text-xl"></i>
+                    </div>
+                    <p class="text-xs text-slate-400 font-medium">暂无未读消息</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = notifications.map(notification => {
+            const pBadge = {
+                'low': 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+                'medium': 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+                'high': 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+            }[notification.priority] || 'bg-slate-100 text-slate-500';
+            
+            const pLabel = { 'low': '低', 'medium': '中', 'high': '高' }[notification.priority] || '中';
+            
+            const timeAgo = formatTimeAgo(notification.created);
+            const nid = String(notification.id);
+            
+            return `
+                <div id="unread-item-${nid}" class="group p-5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center space-x-2 min-w-0">
+                            <span class="px-1.5 py-0.5 ${pBadge} text-[9px] font-bold uppercase rounded-md flex-shrink-0">${pLabel}</span>
+                            <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">${notification.title}</h4>
+                        </div>
+                        <span class="text-[10px] font-medium text-slate-400 flex-shrink-0 ml-2">${timeAgo}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2 leading-relaxed">${notification.body}</p>
+                    <div class="flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${notification.category}</span>
+                        <button onclick="markNotificationRead('${nid}')" class="text-[10px] font-bold text-primary hover:text-primary-hover flex items-center">
+                            标记已读 <i class="fas fa-check ml-1 text-[8px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 格式化时间
+    function formatTimeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        
+        if (diff < 60) return '刚刚';
+        if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+        if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+        if (diff < 86400 * 2) return '昨天';
+        if (diff < 86400 * 7) return Math.floor(diff / 86400) + '天前';
+        return date.toLocaleDateString();
+    }
+
+    // 标记通知为已读
+    window.markNotificationRead = async function(notificationId) {
+        try {
+            const response = await fetch(`/api/notifications/mark-read/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 软刷新：移除该项
+                const item = document.getElementById(`unread-item-${notificationId}`);
+                if (item) {
+                    item.classList.add('opacity-0', '-translate-x-4');
+                    setTimeout(() => {
+                        item.remove();
+                        // 检查是否空了
+                        const container = document.getElementById('notification-list-container');
+                        if (container && container.children.length === 0) {
+                            renderUnreadNotifications([]);
+                        }
+                    }, 300);
+                }
+                
+                // 更新顶部导航栏通知数量（如果存在该全局函数）
+                if (typeof loadNotifications === 'function') {
+                    loadNotifications();
+                }
+            }
+        } catch (error) {
+            console.error('标记已读失败:', error);
+        }
+    };
+
+    // 切换通知模态框
+    window.toggleNotificationModal = function() {
+        const modal = document.getElementById('notification-modal');
+        if (modal) {
+            const isHidden = modal.classList.contains('hidden');
+            if (isHidden) {
+                modal.classList.remove('hidden');
+                loadUnreadNotifications();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+    };
+
+    // 关闭通知模态框
+    window.closeNotificationModal = function() {
+        const modal = document.getElementById('notification-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    };
+</script>

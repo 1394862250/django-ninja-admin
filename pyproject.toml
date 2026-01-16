@@ -1,0 +1,29 @@
+[project]
+name = "django-ninja-admin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "django==5.0.3",
+    "django-allauth==0.60.1",
+    "django-appconf==1.1.0",
+    "django-cors-headers==4.3.1",
+    "django-guardian==3.2.0",
+    "django-model-utils==5.0.0",
+    "django-ninja-extra==0.20.0",
+    "django-ranged-response==0.2.0",
+    "django-ratelimit==4.1.0",
+    "django-simple-captcha==0.6.2",
+    "djangorestframework==3.14.0",
+    "email-validator==2.3.0",
+    "faker>=40.1.2",
+    "markdown==3.6",
+    "ninja-schema>=0.14.3",
+    "pilkit==3.0",
+    "pillow==12.0.0",
+    "plotly>=6.5.2",
+    "psutil==5.9.8",
+    "python-dotenv==1.0.0",
+    "requests==2.31.0",
+]

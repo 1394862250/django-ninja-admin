@@ -1,0 +1,525 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}通知管理 - {{ block.super }}{% endblock %}
+
+{% block page_title %}通知管理{% endblock %}
+
+{% block admin_content %}
+<!-- 头部统计与操作 -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0">
+    <div class="flex items-center space-x-4">
+        <div class="p-3 bg-primary/10 rounded-xl text-primary">
+            <i class="fas fa-bullhorn text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">通知中心</h2>
+            <p class="text-sm text-slate-500">发布系统通告与管理用户通知消息</p>
+        </div>
+    </div>
+    <div class="flex items-center space-x-3">
+        <a href="{% url 'web:notification_create' %}" class="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover shadow-sm transition-all">
+            <i class="fas fa-paper-plane mr-2"></i>
+            发布通知
+        </a>
+        <button id="open-seed-btn" class="inline-flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            <i class="fas fa-flask mr-2"></i>
+            数据工厂
+        </button>
+    </div>
+</div>
+
+<!-- 筛选与搜索 -->
+<div class="modern-card p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">通知类别</label>
+            <select id="filter-category" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">全部类别</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">发送状态</label>
+            <select id="filter-status" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">全部状态</option>
+                <option value="pending">待发送</option>
+                <option value="sent">已发送</option>
+                <option value="failed">发送失败</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">阅读状态</label>
+            <select id="filter-is-read" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">全部</option>
+                <option value="true">已读</option>
+                <option value="false">未读</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button id="filter-btn" class="w-full h-[42px] bg-slate-800 dark:bg-slate-700 text-white rounded-lg font-bold hover:bg-slate-900 transition-all">
+                <i class="fas fa-filter mr-2"></i>筛选
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 数据工厂控制面板 (默认隐藏) -->
+<div id="seed-panel" class="hidden modern-card p-6 mb-8 border-2 border-dashed border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5 animate-fade-in">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="font-bold text-red-700 dark:text-red-400 flex items-center">
+            <i class="fas fa-magic mr-2"></i> 批量通知生成
+        </h3>
+        <button onclick="document.getElementById('seed-panel').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase ml-1">生成数量</label>
+            <input type="number" id="seed-count" value="10" min="1" max="50" class="modern-input w-full px-4 py-2">
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase ml-1">接收角色</label>
+            <select id="seed-role" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">随机用户</option>
+                <option value="all">全部用户</option>
+                <option value="管理员">管理员</option>
+                <option value="用户">普通用户</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase ml-1">优先级</label>
+            <select id="seed-priority" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">随机</option>
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase ml-1">发送状态</label>
+            <select id="seed-status" class="modern-input w-full px-4 py-2 appearance-none">
+                <option value="">随机</option>
+                <option value="pending">待发送</option>
+                <option value="sent">已发送</option>
+                <option value="failed">发送失败</option>
+            </select>
+        </div>
+    </div>
+    <div class="flex justify-end">
+        <button id="seed-btn" class="px-8 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all">
+            立即生成
+        </button>
+    </div>
+</div>
+
+<!-- 通知列表 -->
+<div class="modern-card overflow-hidden">
+    <div id="notifications-loading" class="py-20 text-center">
+        <div class="inline-block animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+        <p class="text-slate-500 font-medium">载入通知数据中...</p>
+    </div>
+
+    <div id="notifications-container" class="divide-y divide-slate-100 dark:divide-slate-800">
+        <!-- 动态渲染 -->
+    </div>
+    
+    <!-- 空状态 -->
+    <div id="notifications-empty" class="hidden py-20 text-center">
+        <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+            <i class="fas fa-bell-slash text-2xl"></i>
+        </div>
+        <p class="text-slate-500">暂无符合条件的通知</p>
+    </div>
+</div>
+
+<!-- 分页 -->
+<div id="pagination-container" class="mt-8 flex justify-center items-center space-x-2"></div>
+
+<!-- 通知详情模态框 -->
+<div id="notification-detail-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-modern shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+            <h3 class="font-bold text-lg">通知详情</h3>
+            <button onclick="closeDetailModal()" class="p-2 text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div id="detail-priority-status" class="flex items-center space-x-2"></div>
+            <h4 id="detail-title" class="text-xl font-bold text-slate-800 dark:text-white"></h4>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap" id="detail-body"></div>
+            <div class="grid grid-cols-2 gap-4 text-xs font-medium text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div class="space-y-1">
+                    <p class="uppercase opacity-50">接收人</p>
+                    <p id="detail-recipient" class="text-slate-600 dark:text-slate-300"></p>
+                </div>
+                <div class="space-y-1">
+                    <p class="uppercase opacity-50">类别</p>
+                    <p id="detail-category" class="text-slate-600 dark:text-slate-300"></p>
+                </div>
+                <div class="space-y-1">
+                    <p class="uppercase opacity-50">创建时间</p>
+                    <p id="detail-created" class="text-slate-600 dark:text-slate-300"></p>
+                </div>
+                <div class="space-y-1" id="detail-read-at-container">
+                    <p class="uppercase opacity-50">阅读时间</p>
+                    <p id="detail-read-at" class="text-slate-600 dark:text-slate-300"></p>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20 flex justify-end">
+            <button onclick="closeDetailModal()" class="px-6 py-2 bg-slate-800 dark:bg-slate-700 text-white text-sm font-bold rounded-lg hover:bg-slate-900 transition-all">关闭</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentPage = 1;
+    let currentFilters = {
+        category: '',
+        status: '',
+        is_read: ''
+    };
+
+    // 适配新 API 的请求函数
+    async function request(url, options = {}) {
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                ...options.headers
+            }
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || '操作失败');
+        return result.data;
+    }
+
+    const Toast = {
+        fire: (options) => {
+            if (window.showToast) {
+                window.showToast(options.title, options.icon);
+            } else {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    ...options
+                });
+            }
+        }
+    };
+
+    // 格式化日期时间
+    function formatDateTime(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // 获取优先级标签样式
+    function getPriorityBadge(priority) {
+        const badges = {
+            'low': 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+            'medium': 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+            'high': 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+        };
+        const labels = { 'low': '低', 'medium': '中', 'high': '高' };
+        return {
+            className: badges[priority] || badges.medium,
+            label: labels[priority] || labels.medium
+        };
+    }
+
+    // 获取状态标签样式
+    function getStatusBadge(status) {
+        const badges = {
+            'pending': 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+            'sent': 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+            'failed': 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+        };
+        const labels = { 'pending': '待发送', 'sent': '已发送', 'failed': '发送失败' };
+        return {
+            className: badges[status] || badges.pending,
+            label: labels[status] || labels.pending
+        };
+    }
+
+    // 加载通知列表
+    async function loadNotifications(page = 1) {
+        const loading = document.getElementById('notifications-loading');
+        const container = document.getElementById('notifications-container');
+        const empty = document.getElementById('notifications-empty');
+        
+        loading.classList.remove('hidden');
+        container.innerHTML = '';
+        empty.classList.add('hidden');
+
+        try {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                page_size: '10'
+            });
+
+            if (currentFilters.category) params.append('category', currentFilters.category);
+            if (currentFilters.status) params.append('status', currentFilters.status);
+            if (currentFilters.is_read !== '') params.append('is_read', currentFilters.is_read);
+
+            const data = await request(`/api/notifications/manage?${params.toString()}`);
+            const results = data.results || [];
+            loadedNotificationsData = results; // 缓存数据用于详情查看
+
+            if (results.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                renderNotifications(results);
+                renderPagination(data.pagination);
+                updateCategoryFilter(results);
+            }
+        } catch (error) {
+            console.error('加载通知列表失败:', error);
+            Toast.fire({ icon: 'error', title: '数据加载失败' });
+        } finally {
+            loading.classList.add('hidden');
+        }
+    }
+
+    // 渲染通知列表
+    function renderNotifications(notifications) {
+        const container = document.getElementById('notifications-container');
+        
+        container.innerHTML = notifications.map(notification => {
+            const pBadge = getPriorityBadge(notification.priority);
+            const sBadge = getStatusBadge(notification.status);
+            
+            // 使用字符串而不是数值，防止 UUID 或大整数溢出
+            const nid = String(notification.id);
+            
+            return `
+                <div data-notification-id="${nid}" 
+                     onclick="viewDetail('${nid}')"
+                     class="p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group cursor-pointer ${notification.is_read ? '' : 'bg-primary/[0.02]'}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <h4 class="text-base font-bold text-slate-800 dark:text-white truncate">${notification.title}</h4>
+                                ${!notification.is_read ? '<span class="px-2 py-0.5 bg-primary text-white text-[10px] font-bold uppercase rounded-md">New</span>' : ''}
+                                <span class="px-2 py-0.5 ${pBadge.className} text-[10px] font-bold uppercase rounded-md">${pBadge.label}</span>
+                                <span class="px-2 py-0.5 ${sBadge.className} text-[10px] font-bold uppercase rounded-md">${sBadge.label}</span>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2 leading-relaxed">${notification.body}</p>
+                            <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-[11px] font-medium text-slate-400">
+                                <span class="flex items-center"><i class="fas fa-tag mr-1.5 opacity-70"></i>${notification.category}</span>
+                                <span class="flex items-center"><i class="fas fa-user mr-1.5 opacity-70"></i>${notification.recipient ? notification.recipient.username : '未知'}</span>
+                                <span class="flex items-center"><i class="fas fa-clock mr-1.5 opacity-70"></i>${formatDateTime(notification.created)}</span>
+                                ${notification.sent_role ? `<span><i class="fas fa-users mr-1.5 opacity-70"></i>角色: ${notification.sent_role === 'all' ? '全部' : notification.sent_role}</span>` : ''}
+                                ${notification.read_at ? `<span><i class="fas fa-check-double mr-1.5 text-green-500/80"></i>已读 ${formatDateTime(notification.read_at)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="ml-6 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                            ${notification.status === 'pending' ? `
+                                <button onclick="sendNotification('${nid}')" class="p-2 text-slate-400 hover:text-green-500 transition-colors" title="立即发送">
+                                    <i class="fas fa-paper-plane text-sm"></i>
+                                </button>
+                            ` : ''}
+                            ${!notification.is_read ? `
+                                <button onclick="markAsRead('${nid}')" class="p-2 text-slate-400 hover:text-primary transition-colors" title="标记已读">
+                                    <i class="fas fa-check text-sm"></i>
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteNotification('${nid}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors" title="删除通知">
+                                <i class="fas fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 全局变量存储当前页通知数据
+    let loadedNotificationsData = [];
+
+    // 查看详情
+    window.viewDetail = (id) => {
+        const notification = loadedNotificationsData.find(n => n.id === id);
+        if (!notification) return;
+
+        const modal = document.getElementById('notification-detail-modal');
+        const pBadge = getPriorityBadge(notification.priority);
+        const sBadge = getStatusBadge(notification.status);
+
+        document.getElementById('detail-priority-status').innerHTML = `
+            <span class="px-2 py-0.5 ${pBadge.className} text-[10px] font-bold uppercase rounded-md">${pBadge.label}</span>
+            <span class="px-2 py-0.5 ${sBadge.className} text-[10px] font-bold uppercase rounded-md">${sBadge.label}</span>
+        `;
+        document.getElementById('detail-title').textContent = notification.title;
+        document.getElementById('detail-body').textContent = notification.body;
+        document.getElementById('detail-recipient').textContent = notification.recipient ? notification.recipient.username : '未知';
+        document.getElementById('detail-category').textContent = notification.category;
+        document.getElementById('detail-created').textContent = formatDateTime(notification.created);
+        
+        const readAtContainer = document.getElementById('detail-read-at-container');
+        if (notification.read_at) {
+            document.getElementById('detail-read-at').textContent = formatDateTime(notification.read_at);
+            readAtContainer.classList.remove('hidden');
+        } else {
+            readAtContainer.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden');
+        
+        // 如果是未读，顺便标记为已读（后台处理）
+        if (!notification.is_read) {
+            markAsRead(id, false); // false 表示不显示 Toast
+        }
+    };
+
+    window.closeDetailModal = () => {
+        document.getElementById('notification-detail-modal').classList.add('hidden');
+    };
+
+    // 渲染分页
+    function renderPagination(pagination) {
+        const wrap = document.getElementById('pagination-container');
+        if (pagination.total_pages <= 1) { wrap.innerHTML = ''; return; }
+        
+        let html = `
+            <button onclick="goToPage(${pagination.page-1})" ${!pagination.has_previous ? 'disabled' : ''} class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-30">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="px-4 text-xs font-bold text-slate-500 uppercase">Page ${pagination.page} of ${pagination.total_pages}</span>
+            <button onclick="goToPage(${pagination.page+1})" ${!pagination.has_next ? 'disabled' : ''} class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-30">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+        wrap.innerHTML = html;
+    }
+
+    // 类别筛选更新
+    function updateCategoryFilter(notifications) {
+        const categories = [...new Set(notifications.map(n => n.category))];
+        const select = document.getElementById('filter-category');
+        const current = select.value;
+        select.innerHTML = '<option value="">全部类别</option>' + 
+            categories.map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('');
+    }
+
+    // 操作函数
+    window.markAsRead = async (id, showToast = true) => {
+        try {
+            await request(`/api/notifications/mark-read/${id}`, { method: 'POST' });
+            if (showToast) Toast.fire({ icon: 'success', title: '已标记为已读' });
+            
+            // 软刷新
+            const row = document.querySelector(`div[data-notification-id="${id}"]`);
+            if (row) {
+                row.classList.remove('bg-primary/[0.02]');
+                const newBadge = row.querySelector('span.bg-primary');
+                if (newBadge) newBadge.remove();
+                const readBtn = row.querySelector('button[title="标记已读"]');
+                if (readBtn) readBtn.remove();
+                
+                // 同时更新本地缓存数据，防止重复触发
+                const index = loadedNotificationsData.findIndex(n => n.id === id);
+                if (index !== -1) {
+                    loadedNotificationsData[index].is_read = true;
+                    loadedNotificationsData[index].read_at = new Date().toISOString();
+                }
+            }
+        } catch (e) { 
+            if (showToast) Toast.fire({ icon: 'error', title: e.message }); 
+        }
+    };
+
+    window.sendNotification = async (id) => {
+        if (!await confirmSwal('确定要发送这条通知吗？')) return;
+        try {
+            await request(`/api/notifications/manage/${id}/send`, { method: 'POST' });
+            Toast.fire({ icon: 'success', title: '通知已发送' });
+            loadNotifications(currentPage);
+        } catch (e) { Toast.fire({ icon: 'error', title: e.message }); }
+    };
+
+    window.deleteNotification = async (id) => {
+        if (!await confirmSwal('确定要删除这条通知吗？', 'warning')) return;
+        try {
+            await request(`/api/notifications/manage/${id}`, { method: 'DELETE' });
+            Toast.fire({ icon: 'success', title: '通知已删除' });
+            
+            // 软刷新
+            const row = document.querySelector(`div[data-notification-id="${id}"]`);
+            if (row) {
+                row.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    row.remove();
+                    if (document.getElementById('notifications-container').children.length === 0) {
+                        loadNotifications(currentPage > 1 ? currentPage - 1 : 1);
+                    }
+                }, 300);
+            }
+        } catch (e) { Toast.fire({ icon: 'error', title: e.message }); }
+    };
+
+    window.goToPage = (p) => { currentPage = p; loadNotifications(p); };
+
+    // 事件监听
+    document.getElementById('open-seed-btn').addEventListener('click', () => {
+        document.getElementById('seed-panel').classList.toggle('hidden');
+    });
+
+    document.getElementById('filter-btn').addEventListener('click', () => {
+        currentFilters = {
+            category: document.getElementById('filter-category').value,
+            status: document.getElementById('filter-status').value,
+            is_read: document.getElementById('filter-is-read').value
+        };
+        loadNotifications(1);
+    });
+
+    document.getElementById('seed-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('seed-btn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>生成中...';
+        try {
+            await request('/api/notifications/seed', {
+                method: 'POST',
+                body: JSON.stringify({
+                    count: parseInt(document.getElementById('seed-count').value),
+                    recipient_role: document.getElementById('seed-role').value || undefined,
+                    priority: document.getElementById('seed-priority').value || undefined,
+                    status: document.getElementById('seed-status').value || undefined,
+                })
+            });
+            Toast.fire({ icon: 'success', title: '测试数据生成成功' });
+            loadNotifications(1);
+        } catch (e) { Toast.fire({ icon: 'error', title: e.message }); }
+        finally { btn.disabled = false; btn.innerHTML = '立即生成'; }
+    });
+
+    async function confirmSwal(text, icon = 'question') {
+        const res = await Swal.fire({
+            title: '确认操作', text: text, icon: icon,
+            showCancelButton: true, confirmButtonColor: '#ea580c', cancelButtonColor: '#64748b',
+            confirmButtonText: '确定', cancelButtonText: '取消',
+            background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
+            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+        });
+        return res.isConfirmed;
+    }
+
+    loadNotifications(1);
+});
+
+// 获取Cookie的辅助函数已在 base_admin.html 中定义，此处直接使用
+</script>
+{% endblock %}

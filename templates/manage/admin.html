@@ -1,0 +1,225 @@
+{% extends "manage/base_admin.html" %}
+
+{% block page_title %}控制面板{% endblock %}
+
+{% block admin_content %}
+<!-- 统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="modern-card p-6 flex items-center space-x-4">
+        <div class="p-3 bg-blue-500/10 rounded-xl text-blue-500">
+            <i class="fas fa-users text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">总用户数</p>
+            <h3 class="text-2xl font-bold" id="totalUsers">-</h3>
+        </div>
+    </div>
+    
+    <div class="modern-card p-6 flex items-center space-x-4">
+        <div class="p-3 bg-green-500/10 rounded-xl text-green-500">
+            <i class="fas fa-user-check text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">今日活跃</p>
+            <h3 class="text-2xl font-bold" id="activeToday">-</h3>
+        </div>
+    </div>
+    
+    <div class="modern-card p-6 flex items-center space-x-4">
+        <div class="p-3 bg-orange-500/10 rounded-xl text-orange-500">
+            <i class="fas fa-bell text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">今日通知</p>
+            <h3 class="text-2xl font-bold" id="notificationsToday">-</h3>
+        </div>
+    </div>
+    
+    <div class="modern-card p-6 flex items-center space-x-4">
+        <div class="p-3 bg-purple-500/10 rounded-xl text-purple-500">
+            <i class="fas fa-bug text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">异常日志</p>
+            <h3 class="text-2xl font-bold" id="errorLogs">-</h3>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 图表占位 -->
+    <div class="lg:col-span-2 modern-card p-6 min-h-[400px] flex flex-col">
+        <div class="flex items-center justify-between mb-6 shrink-0">
+            <h3 class="font-bold">注册增长趋势</h3>
+            <div class="flex space-x-2" id="chartPeriodBtns">
+                <button data-days="7" class="period-btn px-3 py-1 text-xs bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 transition-colors">7天</button>
+                <button data-days="30" class="period-btn px-3 py-1 text-xs bg-primary text-white rounded-lg transition-colors">30天</button>
+            </div>
+        </div>
+        <div id="chartContainer" class="w-full flex-1 flex items-center justify-center text-slate-400 italic min-h-[300px]">
+            图表组件载入中...
+        </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="modern-card p-6 flex flex-col max-h-[600px]">
+        <div class="flex items-center justify-between mb-6 shrink-0">
+            <h3 class="font-bold">最近活动</h3>
+            <a href="{% url 'web:log_management' %}" class="text-xs text-primary hover:underline">查看全部</a>
+        </div>
+        <div class="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar" id="recentActivities">
+            <div class="flex items-start space-x-3 animate-pulse">
+                <div class="w-2 h-2 mt-2 bg-slate-200 rounded-full"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                    <div class="h-2 bg-slate-50 rounded w-1/2"></div>
+                </div>
+            </div>
+            <!-- 更多骨架屏 -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.32.0/plotly.min.js"></script>
+<script>
+    async function initDashboard() {
+        try {
+            // 初始化按钮点击事件
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const days = e.target.dataset.days;
+                    // 切换按钮样式
+                    document.querySelectorAll('.period-btn').forEach(b => {
+                        b.classList.remove('bg-primary', 'text-white');
+                        b.classList.add('bg-slate-100', 'dark:bg-slate-800');
+                    });
+                    e.target.classList.remove('bg-slate-100', 'dark:bg-slate-800');
+                    e.target.classList.add('bg-primary', 'text-white');
+                    
+                    // 加载图表
+                    await loadChart(days);
+                });
+            });
+
+            // 使用 Promise.all 并行请求初始数据
+            const [baseRes, logRes] = await Promise.all([
+                fetch('/api/manage/dashboard'),
+                fetch('/api/logs?per_page=10')
+            ]);
+
+            // 处理基础统计
+            const r = await baseRes.json();
+            if (r.success) {
+                const d = r.data;
+                document.getElementById('totalUsers').textContent = d.total_users || 0;
+                document.getElementById('activeToday').textContent = d.logins_today || 0;
+                document.getElementById('notificationsToday').textContent = d.activities_today || 0;
+                document.getElementById('errorLogs').textContent = 0;
+            }
+
+            // 处理最近日志
+            const logData = await logRes.json();
+            if (logData.success) {
+                const logs = logData.data.items || logData.data.results || [];
+                renderActivities(logs);
+            }
+
+            // 初始加载30天图表
+            await loadChart(30);
+
+        } catch (e) { 
+            console.error('Dashboard init failed', e);
+        }
+    }
+
+    async function loadChart(days) {
+        const container = document.getElementById('chartContainer');
+        try {
+            const res = await fetch(`/api/manage/dashboard/charts?days=${days}`);
+            const data = await res.json();
+            if (data.success) {
+                renderChart(data.data);
+            }
+        } catch (e) {
+            console.error('Load chart failed', e);
+            container.innerHTML = '<span class="text-red-400">图表加载失败</span>';
+        }
+    }
+
+    function renderChart(data) {
+        const container = document.getElementById('chartContainer');
+        if (!data || !data.data) {
+            container.innerHTML = '暂无数据';
+            return;
+        }
+        
+        // 关键修复：移除可能干扰布局的 flex 类，确保 Plotly 测量到正确的容器宽度
+        container.classList.remove('flex', 'items-center', 'justify-center', 'italic');
+        container.innerHTML = '';
+        
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+        const gridColor = 'rgba(148, 163, 184, 0.05)';
+
+        // 深度合并/覆盖配置
+        const layout = {
+            ...data.layout,
+            autosize: true,
+            width: container.clientWidth,
+            height: container.offsetHeight, // 动态使用容器高度，实现铺满
+            margin: { t: 10, b: 30, l: 40, r: 10 },
+            xaxis: { 
+                ...data.layout.xaxis, 
+                color: textColor,
+                automargin: true,
+                fixedrange: true // 禁用 X 轴缩放以提升移动端体验
+            },
+            yaxis: { 
+                ...data.layout.yaxis, 
+                color: textColor, 
+                gridcolor: gridColor,
+                automargin: true,
+                fixedrange: true,
+                zeroline: false
+            },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: false,
+            locale: 'zh-CN'
+        };
+
+        Plotly.newPlot(container, data.data, layout, config);
+        
+        // 针对复杂的网格布局，在渲染后微调一次尺寸
+        setTimeout(() => {
+            Plotly.Plots.resize(container);
+        }, 100);
+    }
+
+    function renderActivities(logs) {
+        const container = document.getElementById('recentActivities');
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p class="text-sm text-slate-400">暂无近期活动</p>';
+            return;
+        }
+        
+        container.innerHTML = logs.map(log => `
+            <div class="flex items-start space-x-3 group">
+                <div class="w-2 h-2 mt-2 bg-primary rounded-full ring-4 ring-orange-500/10 group-hover:scale-125 transition-all"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate text-slate-800 dark:text-slate-200">${log.message}</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">${new Date(log.created).toLocaleString()}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+{% endblock %}

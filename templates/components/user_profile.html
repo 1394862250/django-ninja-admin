@@ -1,0 +1,348 @@
+{% extends "user/base.html" %}
+
+{% block title %}个人信息 - {{ user.username }}{% endblock %}
+
+{% block page_title %}个人资料{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">个人信息</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">查看和管理您的个人信息</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 个人信息卡片 -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center mb-6">
+                    <div class="relative">
+                        <div id="profile-avatar-container" class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                            <span id="profile-avatar-initial">{{ user.username.0|upper }}</span>
+                            <img id="profile-avatar-image" src="" alt="头像" class="w-full h-full rounded-full hidden object-cover">
+                        </div>
+                        <label for="avatar-upload" class="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-camera text-white text-xs"></i>
+                            <input type="file" id="avatar-upload" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                    <div class="ml-4">
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white" id="profile-username">{{ user.username }}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">用户ID: {{ user.id }}</p>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <form id="profile-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">用户名</label>
+                                <input type="text" id="profile-username-input" value="{{ user.username }}" disabled
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用户名不可修改</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱地址</label>
+                                <input type="email" id="profile-email-input" value="{{ user.email }}" disabled
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">邮箱不可修改</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">电话号码</label>
+                                <input type="text" id="profile-phone-input" placeholder="请输入电话号码"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">昵称</label>
+                                <input type="text" id="profile-nickname-input" placeholder="请输入昵称"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">性别</label>
+                                <select id="profile-gender-input" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                                    <option value="">请选择</option>
+                                    <option value="male">男</option>
+                                    <option value="female">女</option>
+                                    <option value="other">其他</option>
+                                    <option value="prefer_not_to_say">不愿透露</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">出生日期</label>
+                                <input type="date" id="profile-birth-date-input" placeholder="YYYY-MM-DD"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button type="button" id="cancel-profile-edit" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                                取消
+                            </button>
+                            <button type="submit" id="save-profile-btn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-save mr-2"></i>保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账户安全卡片 -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">账户安全</h3>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">登录密码</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">用于账户登录验证</p>
+                        </div>
+                        <button id="security-change-password" class="text-sm text-blue-600 dark:text-blue-500 hover:underline">修改</button>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">邮箱验证</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">用于账户安全验证</p>
+                        </div>
+                        <span id="email-verified-badge" class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            {% if user.email %}已验证{% else %}未验证{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷操作卡片 -->
+            <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">快捷操作</h3>
+                
+                <div class="space-y-3">
+                    <a href="{% url 'web:user_home' %}" class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                        <i class="fas fa-home mr-3"></i>
+                        <span>返回首页</span>
+                    </a>
+                    <a href="#" id="logout-link-profile" class="flex items-center text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+                        <i class="fas fa-sign-out-alt mr-3"></i>
+                        <span>退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 快速打开修改密码模态框
+    document.getElementById('security-change-password').addEventListener('click', function() {
+        document.getElementById('change-password-btn').click();
+    });
+    
+    // 加载用户资料
+    async function loadUserProfile() {
+        try {
+            const response = await fetch('/api/user/profile', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                const userData = data.data;
+                
+                // 更新用户名
+                document.getElementById('profile-username').textContent = userData.username;
+                
+                // 更新邮箱验证状态
+                if (userData.email) {
+                    document.getElementById('email-verified-badge').textContent = '已验证';
+                }
+                
+                // 更新头像
+                if (userData.profile && userData.profile.avatar) {
+                    const avatarImg = document.getElementById('profile-avatar-image');
+                    const avatarInitial = document.getElementById('profile-avatar-initial');
+                    avatarImg.src = userData.profile.avatar;
+                    avatarImg.classList.remove('hidden');
+                    avatarInitial.classList.add('hidden');
+                }
+                
+                // 更新个人资料字段
+                if (userData.profile) {
+                    if (userData.profile.phone) {
+                        document.getElementById('profile-phone-input').value = userData.profile.phone;
+                    }
+                    if (userData.profile.nickname) {
+                        document.getElementById('profile-nickname-input').value = userData.profile.nickname;
+                    }
+                    if (userData.profile.gender) {
+                        document.getElementById('profile-gender-input').value = userData.profile.gender;
+                    }
+                    if (userData.profile.birth_date) {
+                        document.getElementById('profile-birth-date-input').value = userData.profile.birth_date;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('加载用户资料失败:', error);
+        }
+    }
+
+    // 上传头像
+    document.getElementById('avatar-upload').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+            showFileError('只能上传图片文件');
+            return;
+        }
+        
+        // 验证文件大小 (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showFileError('文件大小不能超过5MB');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/user/upload-avatar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 更新头像显示
+                const avatarImg = document.getElementById('profile-avatar-image');
+                const avatarInitial = document.getElementById('profile-avatar-initial');
+                if (data.data && data.data.avatar_url) {
+                    avatarImg.src = data.data.avatar_url;
+                    avatarImg.classList.remove('hidden');
+                    avatarInitial.classList.add('hidden');
+                }
+                showFileSuccess('头像上传成功');
+            } else {
+                showFileError(data.message || '头像上传失败');
+            }
+        } catch (error) {
+            console.error('上传头像失败:', error);
+            showFileError('上传失败，请重试');
+        }
+        
+        // 清空文件输入
+        e.target.value = '';
+    });
+
+    // 保存个人资料
+    document.getElementById('profile-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('save-profile-btn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...';
+        
+        const formData = {
+            phone: document.getElementById('profile-phone-input').value.trim(),
+            nickname: document.getElementById('profile-nickname-input').value.trim(),
+            gender: document.getElementById('profile-gender-input').value || '',
+            birth_date: document.getElementById('profile-birth-date-input').value || ''
+        };
+        
+        try {
+            const response = await fetch('/api/user/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showSuccess('个人资料更新成功', {title: '更新成功'});
+                loadUserProfile(); // 重新加载数据
+            } else {
+                showError(data.message || '更新失败', {title: '更新失败'});
+            }
+        } catch (error) {
+            console.error('更新个人资料失败:', error);
+            showError('更新失败，请重试', {title: '更新失败'});
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+
+    // 取消编辑
+    document.getElementById('cancel-profile-edit').addEventListener('click', function() {
+        loadUserProfile(); // 重新加载数据，恢复原始值
+    });
+    
+    // 登出功能
+    document.getElementById('logout-link-profile').addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        if (!confirm('确定要退出登录吗？')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                window.location.href = '{% url "web:login" %}';
+            } else {
+                showError(data.message || '登出失败', {title: '登出失败'});
+            }
+        } catch (error) {
+            console.error('登出错误:', error);
+            window.location.href = '{% url "web:login" %}';
+        }
+    });
+    
+    // 获取Cookie的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 页面加载时获取数据
+    window.addEventListener('DOMContentLoaded', function() {
+        loadUserProfile();
+    });
+</script>
+{% endblock %}

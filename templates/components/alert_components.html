@@ -1,0 +1,217 @@
+<!-- 统一提示框组件 -->
+<script>
+// 基础提示框函数
+function showAlert(message, type = 'info', options = {}) {
+    const config = {
+        title: options.title || '',
+        text: message,
+        icon: type,
+        confirmButtonText: options.confirmText || '确定',
+        confirmButtonColor: '#f97316', // Tailwind orange-500
+        cancelButtonText: options.cancelText || '取消',
+        showCancelButton: options.showCancel || false,
+        timer: options.duration || null,
+        timerProgressBar: options.showProgress || false,
+        customClass: {
+            popup: 'dark:bg-gray-800 dark:text-white',
+            title: 'dark:text-white',
+            content: 'dark:text-gray-300'
+        }
+    };
+
+    // 处理按钮颜色
+    if (type === 'error' || type === 'warning') {
+        config.confirmButtonColor = '#dc2626'; // Tailwind red-600
+    } else if (type === 'success') {
+        config.confirmButtonColor = '#16a34a'; // Tailwind green-600
+    }
+
+    // 根据类型设置默认图标和标题
+    const typeConfig = {
+        success: {
+            title: options.title || '成功',
+            icon: 'success'
+        },
+        error: {
+            title: options.title || '错误',
+            icon: 'error'
+        },
+        warning: {
+            title: options.title || '警告',
+            icon: 'warning'
+        },
+        info: {
+            title: options.title || '提示',
+            icon: 'info'
+        },
+        question: {
+            title: options.title || '询问',
+            icon: 'question'
+        }
+    };
+
+    const finalConfig = { ...config, ...typeConfig[type] };
+    
+    if (options.showCancel) {
+        return Swal.fire(finalConfig);
+    } else {
+        Swal.fire(finalConfig);
+    }
+}
+
+// 信息提示
+function showInfo(message, options = {}) {
+    return showAlert(message, 'info', options);
+}
+
+// 成功提示
+function showSuccess(message, options = {}) {
+    return showAlert(message, 'success', options);
+}
+
+// 错误提示
+function showError(message, options = {}) {
+    return showAlert(message, 'error', options);
+}
+
+// 警告提示
+function showWarning(message, options = {}) {
+    return showAlert(message, 'warning', options);
+}
+
+// 确认对话框
+function showConfirm(message, options = {}) {
+    return Swal.fire({
+        title: options.title || '确认',
+        text: message,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: options.confirmText || '确定',
+        cancelButtonText: options.cancelText || '取消',
+        confirmButtonColor: '#f97316', // Tailwind orange-500
+        customClass: {
+            popup: 'dark:bg-gray-800 dark:text-white',
+            title: 'dark:text-white',
+            content: 'dark:text-gray-300'
+        }
+    }).then((result) => {
+        return result.isConfirmed;
+    });
+}
+
+// 临时提示（自动关闭）
+function showToast(message, type = 'success', duration = 3000) {
+    const config = {
+        title: message,
+        icon: type,
+        timer: duration,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true,
+        customClass: {
+            popup: 'dark:bg-gray-800 dark:text-white mt-16'
+        }
+    };
+
+    const typeConfig = {
+        success: { icon: 'success' },
+        error: { icon: 'error' },
+        warning: { icon: 'warning' },
+        info: { icon: 'info' }
+    };
+
+    const finalConfig = { ...config, ...typeConfig[type] };
+    Swal.fire(finalConfig);
+}
+
+// Ajax 请求错误处理
+function handleAjaxError(error, defaultMessage = '操作失败，请重试') {
+    let message = defaultMessage;
+    
+    if (error.response) {
+        // 服务器响应错误
+        if (error.response.data && error.response.data.message) {
+            message = error.response.data.message;
+        } else if (error.response.status === 404) {
+            message = '请求的资源不存在';
+        } else if (error.response.status === 403) {
+            message = '没有权限执行此操作';
+        } else if (error.response.status >= 500) {
+            message = '服务器内部错误，请稍后重试';
+        }
+    } else if (error.request) {
+        // 网络错误
+        message = '网络连接失败，请检查网络设置';
+    } else {
+        // 其他错误
+        message = error.message || defaultMessage;
+    }
+    
+    showError(message);
+    console.error('Ajax Error:', error);
+}
+
+// 文件上传相关提示
+function showFileError(message) {
+    showError(message, {
+        title: '文件上传失败'
+    });
+}
+
+function showFileSuccess(message) {
+    showSuccess(message, {
+        title: '上传成功'
+    });
+}
+
+// 登录/登出相关提示
+function showAuthError(message) {
+    showError(message, {
+        title: '认证失败'
+    });
+}
+
+function showAuthSuccess(message) {
+    showSuccess(message, {
+        title: '操作成功'
+    });
+}
+
+// 将函数挂载到全局
+window.showAlert = showAlert;
+window.showInfo = showInfo;
+window.showSuccess = showSuccess;
+window.showError = showError;
+window.showWarning = showWarning;
+window.showConfirm = showConfirm;
+window.showToast = showToast;
+window.handleAjaxError = handleAjaxError;
+window.showFileError = showFileError;
+window.showFileSuccess = showFileSuccess;
+window.showAuthError = showAuthError;
+window.showAuthSuccess = showAuthSuccess;
+
+// 为向后兼容，提供原生的 alert 替代
+window.alert = function(message) {
+    showInfo(message);
+};
+
+// 为向后兼容，提供原生的 confirm 替代
+window.confirm = function(message) {
+    return Swal.fire({
+        title: '确认',
+        text: message,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        confirmButtonColor: '#f97316',
+        customClass: {
+            popup: 'dark:bg-gray-800 dark:text-white'
+        }
+    }).then((result) => {
+        return result.isConfirmed;
+    });
+};
+</script>

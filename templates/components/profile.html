@@ -1,0 +1,220 @@
+<!-- 个人信息组件 -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- 个人信息卡片 -->
+    <div class="lg:col-span-2 space-y-8">
+        <div class="modern-card p-8">
+            <div class="flex flex-col md:flex-row md:items-center space-y-6 md:space-y-0 md:space-x-8 mb-10 pb-8 border-b border-slate-100 dark:border-slate-800">
+                <div class="relative group">
+                    <div id="profile-avatar-container" class="w-24 h-24 rounded-2xl bg-primary flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-primary/20 transition-all group-hover:scale-[1.02]">
+                        <span id="profile-avatar-initial">{{ user.username.0|upper }}</span>
+                        <img id="profile-avatar-image" src="" alt="头像" class="w-full h-full rounded-2xl hidden object-cover border-4 border-white dark:border-slate-800 shadow-sm">
+                    </div>
+                    <label for="avatar-upload" class="absolute -bottom-2 -right-2 w-8 h-8 bg-white dark:bg-slate-800 rounded-xl shadow-xl flex items-center justify-center cursor-pointer border border-slate-100 dark:border-slate-700 hover:text-primary transition-all">
+                        <i class="fas fa-camera text-sm"></i>
+                        <input type="file" id="avatar-upload" accept="image/*" class="hidden">
+                    </label>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <h2 class="text-2xl font-bold text-slate-800 dark:text-white" id="profile-username">{{ user.username }}</h2>
+                        {% if user.is_staff %}<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase rounded-md">Staff</span>{% endif %}
+                    </div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center">
+                        <i class="fas fa-fingerprint mr-1.5 opacity-50"></i>ID: {{ user.id }}
+                    </p>
+                </div>
+            </div>
+
+            <form id="profile-form" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">用户名</label>
+                        <input type="text" value="{{ user.username }}" disabled class="modern-input w-full px-4 py-3 opacity-60 bg-slate-50 cursor-not-allowed">
+                        <p class="text-[10px] text-slate-400 italic ml-1">系统登录标识，不可更改</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">电子邮箱</label>
+                        <input type="email" value="{{ user.email }}" disabled class="modern-input w-full px-4 py-3 opacity-60 bg-slate-50 cursor-not-allowed">
+                        <p class="text-[10px] text-slate-400 italic ml-1">主要联系方式，不可更改</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">个性昵称</label>
+                        <input type="text" id="profile-nickname-input" placeholder="请输入您的昵称" class="modern-input w-full px-4 py-3">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">手机号码</label>
+                        <input type="text" id="profile-phone-input" placeholder="请输入联系电话" class="modern-input w-full px-4 py-3">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">您的性别</label>
+                        <select id="profile-gender-input" class="modern-input w-full px-4 py-3 appearance-none">
+                            <option value="">请选择性别</option>
+                            <option value="male">男性</option>
+                            <option value="female">女性</option>
+                            <option value="other">其他</option>
+                            <option value="prefer_not_to_say">不愿透露</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">出生日期</label>
+                        <input type="date" id="profile-birth-date-input" class="modern-input w-full px-4 py-3">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="cancel-profile-edit" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">取消修改</button>
+                    <button type="submit" id="save-profile-btn" class="px-8 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-hover shadow-lg shadow-orange-600/20 transition-all flex items-center">
+                        <i class="fas fa-save mr-2"></i>保存更改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 账户安全卡片 -->
+    <div class="lg:col-span-1">
+        <div class="modern-card p-6">
+            <h3 class="font-bold text-slate-800 dark:text-white mb-6 flex items-center">
+                <i class="fas fa-shield-halved mr-2 text-primary opacity-70"></i>账户安全
+            </h3>
+            
+            <div class="space-y-6">
+                <div class="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/50 group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
+                            <i class="fas fa-key text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">登录密码</p>
+                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">定期更换保障安全</p>
+                        </div>
+                    </div>
+                    <button id="security-change-password" class="p-2 text-slate-400 hover:text-primary transition-colors">
+                        <i class="fas fa-pen-to-square"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+                            <i class="fas fa-envelope text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">邮箱验证</p>
+                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">账号所有权凭证</p>
+                        </div>
+                    </div>
+                    <span id="email-verified-badge" class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-md {% if user.email %}bg-green-100 text-green-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+                        {% if user.email %}已验证{% else %}未验证{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const Toast = {
+        fire: (options) => {
+            if (window.showToast) {
+                window.showToast(options.title, options.icon);
+            } else {
+                Swal.fire({
+                    toast: true, position: 'top-end', showConfirmButton: false,
+                    timer: 3000, timerProgressBar: true, ...options
+                });
+            }
+        }
+    };
+
+    const securityChangePasswordBtn = document.getElementById('security-change-password');
+    if (securityChangePasswordBtn) {
+        securityChangePasswordBtn.addEventListener('click', () => {
+            if (typeof window.openChangePasswordModal === 'function') window.openChangePasswordModal();
+        });
+    }
+    
+    async function loadUserProfile() {
+        try {
+            const res = await fetch('/api/user/profile', { credentials: 'same-origin' });
+            const result = await res.json();
+            
+            if (result.success && result.data) {
+                const u = result.data;
+                const p = u.profile || {};
+                
+                document.getElementById('profile-username').textContent = u.username;
+                if (p.avatar) {
+                    const img = document.getElementById('profile-avatar-image');
+                    const ini = document.getElementById('profile-avatar-initial');
+                    img.src = p.avatar; img.classList.remove('hidden'); ini.classList.add('hidden');
+                }
+                
+                document.getElementById('profile-phone-input').value = p.phone || '';
+                document.getElementById('profile-nickname-input').value = p.nickname || '';
+                document.getElementById('profile-gender-input').value = p.gender || '';
+                document.getElementById('profile-birth-date-input').value = p.birth_date || '';
+            }
+        } catch (e) {}
+    }
+
+    const avatarUpload = document.getElementById('avatar-upload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) { Toast.fire({ icon: 'error', title: '只能上传图片文件' }); return; }
+            
+            const fd = new FormData(); fd.append('file', file);
+            try {
+                const res = await fetch('/api/user/upload-avatar', {
+                    method: 'POST', body: fd, credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const img = document.getElementById('profile-avatar-image');
+                    const ini = document.getElementById('profile-avatar-initial');
+                    img.src = data.data.avatar_url; img.classList.remove('hidden'); ini.classList.add('hidden');
+                    Toast.fire({ icon: 'success', title: '头像更新成功' });
+                    if (typeof loadAdminInfo === 'function') loadAdminInfo();
+                }
+            } catch (e) { Toast.fire({ icon: 'error', title: '上传失败' }); }
+            e.target.value = '';
+        });
+    }
+
+    const profileForm = document.getElementById('profile-form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-profile-btn');
+            const original = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...';
+            
+            const payload = {
+                phone: document.getElementById('profile-phone-input').value.trim(),
+                nickname: document.getElementById('profile-nickname-input').value.trim(),
+                gender: document.getElementById('profile-gender-input').value,
+                birth_date: document.getElementById('profile-birth-date-input').value
+            };
+            
+            try {
+                const res = await fetch('/api/user/update-profile', {
+                    method: 'POST', body: JSON.stringify(payload), credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    Toast.fire({ icon: 'success', title: '个人资料已更新' });
+                    loadUserProfile();
+                } else throw new Error(data.message);
+            } catch (e) { Toast.fire({ icon: 'error', title: e.message }); }
+            finally { btn.disabled = false; btn.innerHTML = original; }
+        });
+    }
+
+    document.getElementById('cancel-profile-edit').addEventListener('click', loadUserProfile);
+    loadUserProfile();
+})();
+</script>

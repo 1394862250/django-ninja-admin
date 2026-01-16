@@ -1,0 +1,310 @@
+{% extends 'manage/base_admin.html' %}
+
+{% block title %}发布通知 - {{ block.super }}{% endblock %}
+
+{% block page_title %}发布通知{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-4xl mx-auto">
+    <!-- 页面标题和操作按钮 -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">发布通知</h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">创建并发送通知给指定用户</p>
+        </div>
+        <a href="{% url 'web:notification_management' %}" class="inline-flex items-center px-4 py-2 bg-gray-500 dark:bg-gray-700 text-white text-sm font-semibold rounded focus:outline-none">
+            <i class="fas fa-arrow-left mr-2"></i>
+            返回列表
+        </a>
+    </div>
+
+    <!-- 通知发布表单 -->
+    <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6">
+        <form id="notification-form" class="space-y-6">
+            <!-- 接收方式选择 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    接收方式 <span class="text-red-500">*</span>
+                </label>
+                <div class="flex space-x-4 mb-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="recipient_type" value="role" checked class="mr-2">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">按角色</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="recipient_type" value="user" class="mr-2">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">指定用户</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 接收角色（按角色时显示） -->
+            <div id="recipient-role-group">
+                <label for="recipient_role" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    接收角色 <span class="text-red-500">*</span>
+                </label>
+                <select id="recipient_role" name="recipient_role"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <option value="all">全局（所有用户）</option>
+                    <option value="管理员">管理员</option>
+                    <option value="用户">用户</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">选择要接收通知的角色，将批量发送给该角色的所有用户</p>
+            </div>
+
+            <!-- 接收用户（指定用户时显示） -->
+            <div id="recipient-user-group" style="display: none;">
+                <label for="recipient_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    接收用户 <span class="text-red-500">*</span>
+                </label>
+                <select id="recipient_id" name="recipient_id"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <option value="">请选择用户</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">选择要接收通知的用户</p>
+            </div>
+
+            <!-- 通知标题 -->
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    通知标题 <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="title" name="title" required maxlength="200"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="请输入通知标题">
+            </div>
+
+            <!-- 通知内容 -->
+            <div>
+                <label for="body" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    通知内容 <span class="text-red-500">*</span>
+                </label>
+                <textarea id="body" name="body" required rows="6"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="请输入通知内容"></textarea>
+            </div>
+
+            <!-- 通知类别 -->
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    通知类别 <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="category" name="category" required maxlength="30"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="例如：系统通知、活动通知、消息通知等">
+            </div>
+
+            <!-- 优先级和状态 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 优先级 -->
+                <div>
+                    <label for="priority" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        优先级
+                    </label>
+                    <select id="priority" name="priority"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="low">低</option>
+                        <option value="medium" selected>中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+
+                <!-- 状态 -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        状态
+                    </label>
+                    <select id="status" name="status"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="pending" selected>待发送</option>
+                        <option value="sent">已发送</option>
+                        <option value="failed">发送失败</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 计划发送时间 -->
+            <div>
+                <label for="scheduled_for" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    计划发送时间（可选）
+                </label>
+                <input type="datetime-local" id="scheduled_for" name="scheduled_for"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">留空则立即发送</p>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'web:notification_management' %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 focus:outline-none">
+                    取消
+                </a>
+                <button type="submit" class="px-6 py-2 bg-orange-500 dark:bg-gray-700 text-white rounded focus:outline-none">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    发布通知
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取Cookie的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 显示Toast通知
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded shadow-lg z-50 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // 加载用户列表
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/manage/users?page_size=1000', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.users) {
+                const select = document.getElementById('recipient_id');
+                data.data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.username} (${user.email})`;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('加载用户列表失败:', error);
+            showToast('加载用户列表失败', 'error');
+        }
+    }
+
+    // 切换接收方式
+    document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const recipientRoleGroup = document.getElementById('recipient-role-group');
+            const recipientUserGroup = document.getElementById('recipient-user-group');
+            
+            if (this.value === 'role') {
+                recipientRoleGroup.style.display = 'block';
+                recipientUserGroup.style.display = 'none';
+                document.getElementById('recipient_role').required = true;
+                document.getElementById('recipient_id').required = false;
+            } else {
+                recipientRoleGroup.style.display = 'none';
+                recipientUserGroup.style.display = 'block';
+                document.getElementById('recipient_role').required = false;
+                document.getElementById('recipient_id').required = true;
+            }
+        });
+    });
+
+    // 表单提交处理
+    document.getElementById('notification-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const recipientType = formData.get('recipient_type');
+        
+        const notificationData = {
+            title: formData.get('title'),
+            body: formData.get('body'),
+            category: formData.get('category'),
+            priority: formData.get('priority'),
+            status: formData.get('status'),
+        };
+
+        // 根据接收方式设置接收者
+        if (recipientType === 'role') {
+            notificationData.recipient_role = formData.get('recipient_role');
+            if (!notificationData.recipient_role) {
+                showToast('请选择接收角色', 'error');
+                return;
+            }
+        } else {
+            const recipientId = formData.get('recipient_id');
+            if (!recipientId) {
+                showToast('请选择接收用户', 'error');
+                return;
+            }
+            notificationData.recipient_id = parseInt(recipientId);
+        }
+
+        // 处理计划发送时间
+        const scheduledFor = formData.get('scheduled_for');
+        if (scheduledFor) {
+            notificationData.scheduled_for = new Date(scheduledFor).toISOString();
+        }
+
+        // 提交按钮禁用
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>发布中...';
+
+        try {
+            const response = await fetch('/api/notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer session',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(notificationData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const count = data.data?.count || 1;
+                showToast(`成功发布 ${count} 条通知`, 'success');
+                setTimeout(() => {
+                    window.location.href = '{% url "web:notification_management" %}';
+                }, 1500);
+            } else {
+                showToast(data.message || '通知发布失败', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('发布通知失败:', error);
+            showToast('发布通知失败，请稍后重试', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+
+    // 初始化加载用户列表
+    loadUsers();
+});
+</script>
+{% endblock %}
+

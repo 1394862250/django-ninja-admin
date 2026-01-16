@@ -1,0 +1,39 @@
+{% extends "user/base.html" %}
+
+{% block title %}个人设置 - {{ user.username }}{% endblock %}
+
+{% block page_title %}个人资料{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+            <div class="p-3 bg-primary/10 rounded-xl text-primary">
+                <i class="fas fa-user-gear text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 dark:text-white">个人设置</h1>
+                <p class="text-sm text-slate-500 uppercase font-bold tracking-widest mt-0.5">Profile Settings</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'web:user_home' %}" 
+               class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all">
+                <i class="fas fa-arrow-left mr-2"></i>
+                返回首页
+            </a>
+        </div>
+    </div>
+
+    {% include "components/profile.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 获取Cookie的辅助函数已在 base.html 或 profile.html 中复用
+    document.addEventListener('DOMContentLoaded', function() {
+        // 可以在这里添加资料页特有的脚本逻辑
+    });
+</script>
+{% endblock %}

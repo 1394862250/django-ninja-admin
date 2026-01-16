@@ -1,0 +1,43 @@
+# Django项目依赖 - 完整工具集
+Django==5.0.3
+requests==2.31.0
+django-cors-headers==4.3.1
+django-ratelimit==4.1.0
+python-dotenv==1.0.0
+
+# 认证系统
+django-allauth==0.60.1
+
+# API框架
+djangorestframework==3.14.0
+django-ninja-extra==0.20.0
+ninja-schema
+
+# 数据验证
+email-validator==2.3.0
+
+# 权限管理
+django-guardian==3.2.0
+
+# 图片处理 - 使用Pillow直接处理
+Pillow==12.0.0
+
+# 模型工具
+django-model-utils==5.0.0
+
+# 验证码系统
+django-simple-captcha==0.6.2
+django-ranged-response==0.2.0
+
+# 开发工具
+django-appconf==1.1.0
+pilkit==3.0
+
+# 系统监控
+psutil==5.9.8
+
+# Markdown处理
+markdown==3.6
+
+# 数据生成
+Faker==25.9.2
